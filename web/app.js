@@ -1,7 +1,9 @@
 // pot*scraper browser — load the recipe subset, browse/search/filter, and
 // modernize a chosen recipe via the Netlify function (key stays server-side).
 
-const FN = '/.netlify/functions/modernize';
+// Modernize endpoints, tried in order: Cloudflare Pages Function first, then
+// Netlify. Whichever platform the site is deployed on answers; the other 404s.
+const ENDPOINTS = ['/api/modernize', '/.netlify/functions/modernize'];
 const state = { all: [], view: [], store: 'all', q: '' };
 
 const $ = (s) => document.querySelector(s);
@@ -110,13 +112,18 @@ async function runModernize(r) {
   btn.textContent = '✨ Modernizing… (a few seconds)';
   out.innerHTML = '';
   try {
-    const res = await fetch(FN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: r.title, body: r.body, source: r.source_title }),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.ok) throw new Error(json.error || 'request failed');
+    const payload = JSON.stringify({ title: r.title, body: r.body, source: r.source_title });
+    let json = null;
+    for (const url of ENDPOINTS) {
+      const res = await fetch(url, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload,
+      });
+      if (res.status === 404) continue;          // wrong platform's route — try the next
+      json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.error || 'request failed');
+      break;
+    }
+    if (!json) throw new Error('no modernize function found on this deploy');
     out.innerHTML = modernHTML(json.data);
     btn.textContent = '✨ Modernize again';
   } catch (e) {

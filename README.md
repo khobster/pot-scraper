@@ -104,6 +104,28 @@ Anthropic auto-scan public repos and revoke exposed keys.) `POT_SCRAPER_MODEL`
 can also go in this file. Alternatively, just `export ANTHROPIC_API_KEY=...` in
 your shell.
 
+## Browser version (Cloudflare Pages or Netlify)
+
+`web/` is a static browse/search/modernize UI over a variety-capped subset of
+the library (`web/data/recipes.json` — regenerate with `python3
+scripts/export_web.py`). The **Modernize** button calls a serverless function
+that proxies Claude, so the API key stays server-side, never in the page.
+
+**Cloudflare Pages** (function at `functions/api/modernize.js`):
+
+1. Pages → **Create → Connect to Git** → pick this repo.
+2. Build command: *(none)*. Build output directory: `web`.
+3. **Settings → Variables and Secrets** → add secret `ANTHROPIC_API_KEY`
+   (optional `MODEL`, defaults to `claude-opus-4-8`). Redeploy.
+
+**Netlify** (function at `netlify/functions/modernize.js`, config in
+`netlify.toml`): connect the repo, then set `ANTHROPIC_API_KEY` in Site
+configuration → Environment variables.
+
+The front-end auto-detects which platform served it (`/api/modernize` on
+Cloudflare, `/.netlify/functions/modernize` on Netlify), so the same code
+deploys to either.
+
 ## Data
 
 Everything is public domain via Project Gutenberg. The local recipe cache lives
