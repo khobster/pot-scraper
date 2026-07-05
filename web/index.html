@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>pot✱scraper — cookable recipes from old cookbooks</title>
+<meta name="description" content="Cookable recipes pulled from public-domain cookbooks, scored for a Charleston grocery run, with one-tap AI modernization." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1 class="wordmark">pot<span class="star">✱</span>scraper</h1>
+    <p class="tag">cookable recipes mined from public-domain cookbooks · scored for a
+      <b>Charleston</b> grocery run (Walmart · Aldi · Costco)</p>
+  </div>
+</header>
+
+<div class="controls wrap">
+  <input id="search" class="search" type="search"
+         placeholder="search 2,780 recipes — beef, plum, pudding, cornmeal…" autocomplete="off" />
+  <div class="row">
+    <div class="chips" id="stores">
+      <button class="chip on" data-store="all">any store</button>
+      <button class="chip" data-store="Walmart">Walmart</button>
+      <button class="chip" data-store="Aldi">Aldi</button>
+      <button class="chip" data-store="Costco">Costco</button>
+    </div>
+    <button id="surprise" class="surprise">🎲 surprise me</button>
+  </div>
+  <p class="count" id="count">loading the pantry…</p>
+</div>
+
+<main class="wrap grid" id="grid"></main>
+
+<div class="detail" id="detail" hidden>
+  <div class="sheet">
+    <button class="close" id="close" aria-label="close">✕</button>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<footer class="foot wrap">
+  <span>Recipes are public domain via <a href="https://www.gutenberg.org">Project Gutenberg</a>.</span>
+  <span><a href="https://github.com/khobster/pot-scraper">source on GitHub</a> · the CLI holds the full 53k-recipe library</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

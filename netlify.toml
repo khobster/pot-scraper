@@ -1,0 +1,10 @@
+# Netlify config for the pot*scraper browser front-end.
+# The static site is in web/; the modernize proxy is a serverless function.
+# Set ANTHROPIC_API_KEY in Site configuration -> Environment variables.
+
+[build]
+  publish = "web"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"

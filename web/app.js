@@ -1,0 +1,157 @@
+// pot*scraper browser — load the recipe subset, browse/search/filter, and
+// modernize a chosen recipe via the Netlify function (key stays server-side).
+
+const FN = '/.netlify/functions/modernize';
+const state = { all: [], view: [], store: 'all', q: '' };
+
+const $ = (s) => document.querySelector(s);
+const grid = $('#grid');
+const countEl = $('#count');
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const stars = (n) => '★'.repeat(n) + '·'.repeat(10 - n);
+
+// ---- load ----
+fetch('data/recipes.json')
+  .then((r) => r.json())
+  .then((data) => {
+    state.all = data;
+    apply();
+  })
+  .catch(() => { countEl.textContent = 'could not load recipes.'; });
+
+// ---- filter + render ----
+function apply() {
+  const q = state.q.trim().toLowerCase();
+  state.view = state.all.filter((r) => {
+    if (state.store !== 'all') {
+      const has = r.ingredients.some((i) => i.stores.includes(state.store));
+      if (!has) return false;
+    }
+    if (q) {
+      const hay = (r.title + ' ' + r.ingredients.map((i) => i.name).join(' ')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  countEl.textContent = `${state.view.length.toLocaleString()} recipes`
+    + (state.store !== 'all' ? ` at ${state.store}` : '')
+    + (q ? ` matching “${state.q}”` : '');
+  render();
+}
+
+function render() {
+  const slice = state.view.slice(0, 120); // keep the DOM light
+  grid.innerHTML = slice.map(cardHTML).join('') ||
+    '<p style="color:var(--muted)">no recipes match — try a different word or store.</p>';
+  [...grid.children].forEach((el, i) => {
+    if (slice[i]) el.onclick = () => openDetail(slice[i]);
+  });
+  if (state.view.length > slice.length) {
+    const more = document.createElement('p');
+    more.style.cssText = 'grid-column:1/-1;color:var(--muted);text-align:center;font-family:monospace;font-size:13px';
+    more.textContent = `+ ${state.view.length - slice.length} more — refine your search to see them`;
+    grid.appendChild(more);
+  }
+}
+
+function cardHTML(r) {
+  const ing = r.ingredients.slice(0, 5).map((i) => `<span class="pill">${esc(i.name)}</span>`).join('');
+  return `<article class="card">
+    <h3>${esc(r.title)}</h3>
+    <span class="score"><span class="stars">${stars(r.score)}</span> ${r.score}/10</span>
+    <div class="tags">${ing}</div>
+    <span class="src">${esc(r.source_title.slice(0, 60))}</span>
+  </article>`;
+}
+
+// ---- detail ----
+const detail = $('#detail');
+const detailBody = $('#detailBody');
+
+function shopHTML(r) {
+  const by = {};
+  r.ingredients.forEach((i) => { const s = i.stores[0]; (by[s] = by[s] || []).push(i.name); });
+  return ['Walmart', 'Aldi', 'Costco'].filter((s) => by[s]).map((s) =>
+    `<div><span class="store">${s}:</span> ${by[s].join(', ')}</div>`).join('');
+}
+
+function openDetail(r) {
+  const measures = r.measures.length
+    ? `<div class="block"><h4>old measures</h4><div class="measures">${r.measures.map((m) => esc(m.unit) + ' → ' + esc(m.modern)).join(' · ')}</div></div>` : '';
+  const hard = r.hard.length
+    ? `<div class="block"><div class="warn"><b>harder to source:</b> ${r.hard.map((h) => esc(h.name) + ' — ' + esc(h.reason)).join('; ')}</div></div>` : '';
+  detailBody.innerHTML = `
+    <h2 class="d-title">${esc(r.title)}</h2>
+    <p class="d-src">from ${esc(r.source_title)} — ${esc(r.source_author)}
+      · <a href="${esc(r.source_url)}" target="_blank" rel="noopener">Gutenberg</a></p>
+    <span class="d-score">${stars(r.score)} ${r.score}/10 practical</span>
+    <div class="block"><h4>shopping list · Charleston</h4><div class="shop">${shopHTML(r)}</div></div>
+    ${hard}
+    ${measures}
+    <div class="block"><h4>original recipe</h4><div class="orig">${esc(r.body)}</div></div>
+    <button class="modernize-btn" id="mbtn">✨ Modernize this recipe with Claude</button>
+    <div id="modernOut"></div>`;
+  $('#mbtn').onclick = () => runModernize(r);
+  detail.hidden = false;
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail() { detail.hidden = true; document.body.style.overflow = ''; }
+$('#close').onclick = closeDetail;
+detail.onclick = (e) => { if (e.target === detail) closeDetail(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !detail.hidden) closeDetail(); });
+
+// ---- modernize (calls the Netlify function) ----
+async function runModernize(r) {
+  const btn = $('#mbtn');
+  const out = $('#modernOut');
+  btn.disabled = true;
+  btn.textContent = '✨ Modernizing… (a few seconds)';
+  out.innerHTML = '';
+  try {
+    const res = await fetch(FN, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: r.title, body: r.body, source: r.source_title }),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.ok) throw new Error(json.error || 'request failed');
+    out.innerHTML = modernHTML(json.data);
+    btn.textContent = '✨ Modernize again';
+  } catch (e) {
+    out.innerHTML = `<div class="err">Couldn’t modernize: ${esc(e.message)}.<br>
+      (If this is a fresh deploy, make sure <b>ANTHROPIC_API_KEY</b> is set in Netlify’s environment variables.)</div>`;
+    btn.textContent = '✨ Try again';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function modernHTML(m) {
+  const ing = (m.ingredients || []).map((i) => `<li>${esc(i)}</li>`).join('');
+  const steps = (m.steps || []).map((s) => `<li>${esc(s)}</li>`).join('');
+  const shop = (m.shopping_list || []).map((s) => `<li>${esc(s.item)} <span class="pill">${esc(s.store)}</span></li>`).join('');
+  return `<div class="modern">
+    <h3>${esc(m.title || 'Modernized')}</h3>
+    <div class="serves">serves ${esc(m.servings || '?')}</div>
+    <div class="block"><h4>ingredients</h4><ul>${ing}</ul></div>
+    <div class="block"><h4>steps</h4><ol>${steps}</ol></div>
+    <div class="block"><h4>shopping list</h4><ul>${shop}</ul></div>
+    ${m.notes ? `<div class="block"><h4>notes</h4><p>${esc(m.notes)}</p></div>` : ''}
+  </div>`;
+}
+
+// ---- controls ----
+$('#search').addEventListener('input', (e) => { state.q = e.target.value; apply(); });
+$('#stores').addEventListener('click', (e) => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  [...$('#stores').children].forEach((c) => c.classList.remove('on'));
+  b.classList.add('on');
+  state.store = b.dataset.store;
+  apply();
+});
+$('#surprise').addEventListener('click', () => {
+  if (!state.view.length) return;
+  openDetail(state.view[Math.floor(Math.random() * state.view.length)]);
+});
