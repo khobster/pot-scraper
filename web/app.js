@@ -4,7 +4,7 @@
 // Modernize endpoints, tried in order: Cloudflare Pages Function first, then
 // Netlify. Whichever platform the site is deployed on answers; the other 404s.
 const ENDPOINTS = ['/api/modernize', '/.netlify/functions/modernize'];
-const state = { all: [], view: [], store: 'all', q: '' };
+const state = { all: [], view: [], store: 'all', cuisine: 'all', q: '' };
 
 const $ = (s) => document.querySelector(s);
 const grid = $('#grid');
@@ -18,14 +18,28 @@ fetch('data/recipes.json')
   .then((r) => r.json())
   .then((data) => {
     state.all = data;
+    populateCuisines(data);
     apply();
   })
   .catch(() => { countEl.textContent = 'could not load recipes.'; });
+
+function populateCuisines(data) {
+  const counts = {};
+  data.forEach((r) => { if (r.cuisine) counts[r.cuisine] = (counts[r.cuisine] || 0) + 1; });
+  const names = Object.keys(counts).sort((a, b) => counts[b] - counts[a]); // most recipes first
+  const sel = $('#cuisine');
+  names.forEach((c) => {
+    const o = document.createElement('option');
+    o.value = c; o.textContent = `${c} (${counts[c]})`;
+    sel.appendChild(o);
+  });
+}
 
 // ---- filter + render ----
 function apply() {
   const q = state.q.trim().toLowerCase();
   state.view = state.all.filter((r) => {
+    if (state.cuisine !== 'all' && r.cuisine !== state.cuisine) return false;
     if (state.store !== 'all') {
       const has = r.ingredients.some((i) => i.stores.includes(state.store));
       if (!has) return false;
@@ -37,8 +51,9 @@ function apply() {
     return true;
   });
   countEl.textContent = `${state.view.length.toLocaleString()} recipes`
-    + (state.store !== 'all' ? ` at ${state.store}` : '')
-    + (q ? ` matching “${state.q}”` : '');
+    + (state.cuisine !== 'all' ? ` · ${state.cuisine}` : '')
+    + (state.store !== 'all' ? ` · at ${state.store}` : '')
+    + (q ? ` · “${state.q}”` : '');
   render();
 }
 
@@ -59,11 +74,16 @@ function render() {
 
 function cardHTML(r) {
   const ing = r.ingredients.slice(0, 5).map((i) => `<span class="pill">${esc(i.name)}</span>`).join('');
+  const thumb = r.image ? `<img class="thumb" src="${esc(r.image)}" alt="" loading="lazy">` : '';
+  const cz = r.cuisine ? `<span class="cz">${esc(r.cuisine)}</span>` : '';
   return `<article class="card">
-    <h3>${esc(r.title)}</h3>
-    <span class="score"><span class="stars">${stars(r.score)}</span> ${r.score}/10</span>
-    <div class="tags">${ing}</div>
-    <span class="src">${esc(r.source_title.slice(0, 60))}</span>
+    ${thumb}
+    <div class="card-body">
+      <div class="card-top">${cz}<span class="score"><span class="stars">${stars(r.score)}</span> ${r.score}</span></div>
+      <h3>${esc(r.title)}</h3>
+      <div class="tags">${ing}</div>
+      <span class="src">${esc(r.source_title.slice(0, 60))}</span>
+    </div>
   </article>`;
 }
 
@@ -83,10 +103,14 @@ function openDetail(r) {
     ? `<div class="block"><h4>old measures</h4><div class="measures">${r.measures.map((m) => esc(m.unit) + ' → ' + esc(m.modern)).join(' · ')}</div></div>` : '';
   const hard = r.hard.length
     ? `<div class="block"><div class="warn"><b>harder to source:</b> ${r.hard.map((h) => esc(h.name) + ' — ' + esc(h.reason)).join('; ')}</div></div>` : '';
+  const img = r.image ? `<img class="d-img" src="${esc(r.image)}" alt="">` : '';
+  const cz = r.cuisine ? `<span class="d-cz">${esc(r.cuisine)}</span>` : '';
+  const srcLabel = r.source_title.startsWith('TheMealDB') ? 'TheMealDB' : 'Gutenberg';
   detailBody.innerHTML = `
-    <h2 class="d-title">${esc(r.title)}</h2>
+    ${img}
+    <h2 class="d-title">${cz}${esc(r.title)}</h2>
     <p class="d-src">from ${esc(r.source_title)} — ${esc(r.source_author)}
-      · <a href="${esc(r.source_url)}" target="_blank" rel="noopener">Gutenberg</a></p>
+      · <a href="${esc(r.source_url)}" target="_blank" rel="noopener">${srcLabel}</a></p>
     <span class="d-score">${stars(r.score)} ${r.score}/10 practical</span>
     <div class="block"><h4>shopping list · Charleston</h4><div class="shop">${shopHTML(r)}</div></div>
     ${hard}
@@ -151,6 +175,7 @@ function modernHTML(m) {
 
 // ---- controls ----
 $('#search').addEventListener('input', (e) => { state.q = e.target.value; apply(); });
+$('#cuisine').addEventListener('change', (e) => { state.cuisine = e.target.value; apply(); });
 $('#stores').addEventListener('click', (e) => {
   const b = e.target.closest('.chip'); if (!b) return;
   [...$('#stores').children].forEach((c) => c.classList.remove('on'));

@@ -11,15 +11,18 @@
 <header class="top">
   <div class="wrap">
     <h1 class="wordmark">pot<span class="star">✱</span>scraper</h1>
-    <p class="tag">cookable recipes mined from public-domain cookbooks · scored for a
-      <b>Charleston</b> grocery run (Walmart · Aldi · Costco)</p>
+    <p class="tag">authentic recipes by cuisine — historical masters (Escoffier, Artusi) +
+      modern regional — scored for a <b>Charleston</b> grocery run</p>
   </div>
 </header>
 
 <div class="controls wrap">
   <input id="search" class="search" type="search"
-         placeholder="search 2,780 recipes — beef, plum, pudding, cornmeal…" autocomplete="off" />
+         placeholder="search 7,595 recipes — osso buco, tagine, pad thai, coq au vin…" autocomplete="off" />
   <div class="row">
+    <select id="cuisine" class="cuisine">
+      <option value="all">all cuisines</option>
+    </select>
     <div class="chips" id="stores">
       <button class="chip on" data-store="all">any store</button>
       <button class="chip" data-store="Walmart">Walmart</button>

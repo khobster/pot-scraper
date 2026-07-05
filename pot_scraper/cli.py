@@ -5,7 +5,8 @@ import random
 import sys
 import textwrap
 
-from . import sources, parse, store
+from . import sources, parse, store, mealdb
+from .cuisine import cuisine_of_book
 from .score import score_recipe, shopping_list
 from .config import PRACTICAL_THRESHOLD
 
@@ -19,6 +20,8 @@ def _stars(score):
 def _print_recipe(r, full=True):
     print()
     print(f"  {r['title'].upper()}")
+    if r.get("cuisine"):
+        print(f"  🍽  {r['cuisine']} cuisine")
     print(f"  from {r.get('source_title', '?')} ({r.get('source_author', '?')})")
     print(f"  practical {r['score']}/10  {_stars(r['score'])}")
     print()
@@ -116,9 +119,61 @@ def _ingest(query, limit, by, seen_books, quiet=False):
     return new_recipes
 
 
+def cmd_mealdb(args):
+    print("Pulling authentic regional recipes from TheMealDB...")
+    try:
+        raw = mealdb.fetch_all()
+    except Exception as e:
+        print(f"TheMealDB fetch failed: {e}")
+        return 1
+    new_recipes = []
+    for m in raw:
+        rec = mealdb.to_recipe(m)
+        if not rec:
+            continue
+        score_recipe(rec)
+        if rec["score"] == 0:
+            continue
+        rec["id"] = store.recipe_id("themealdb", rec["source_meal_id"])
+        new_recipes.append(rec)
+    # idempotent refresh: drop any prior TheMealDB rows, then add the fresh set
+    kept = [r for r in store.load_recipes() if r.get("source_id") != "themealdb"]
+    store.save_recipes(kept)
+    added = store.upsert_many(new_recipes)
+    from collections import Counter
+    by = Counter(r["cuisine"] for r in new_recipes)
+    print(f"Added {added} TheMealDB recipes. Cuisines: " +
+          ", ".join(f"{c} {n}" for c, n in by.most_common(12)))
+    print(f"Library now holds {len(store.load_recipes())}.")
+    return 0
+
+
+def cmd_curate(args):
+    """Tag every recipe with a cuisine and drop generic Anglo-American books."""
+    recipes = store.load_recipes()
+    kept, dropped = [], 0
+    for r in recipes:
+        if r.get("cuisine"):                 # TheMealDB (already tagged)
+            kept.append(r); continue
+        c = cuisine_of_book(r.get("source_title", ""), r.get("source_author", ""))
+        if c:
+            r["cuisine"] = c
+            kept.append(r)
+        else:
+            dropped += 1                     # generic Anglo domestic — cut it
+    store.save_recipes(kept)
+    from collections import Counter
+    by = Counter(r["cuisine"] for r in kept)
+    print(f"Kept {len(kept)} authentic recipes, dropped {dropped} Anglo-American.")
+    print("By cuisine: " + ", ".join(f"{c} {n}" for c, n in by.most_common()))
+    return 0
+
+
 def cmd_fetch(args):
     seen_books = store.load_books()
 
+    if args.mealdb:
+        return cmd_mealdb(args)
     if args.broad:
         print("Broad sweep of Project Gutenberg's cooking shelves...")
         new_recipes = []
@@ -163,22 +218,28 @@ def cmd_rescore(args):
     return 0
 
 
-def _pool(practical):
+def _pool(practical, cuisine=None):
     recipes = store.load_recipes()
     if not recipes:
         print("No recipes yet. Run `pot-scraper fetch` first.")
         return None
+    if cuisine:
+        want = cuisine.lower()
+        recipes = [r for r in recipes if want in (r.get("cuisine", "") or "").lower()]
+        if not recipes:
+            cuisines = sorted({r.get("cuisine") for r in store.load_recipes() if r.get("cuisine")})
+            print(f"No '{cuisine}' recipes. Available: {', '.join(cuisines)}")
+            return None
     if practical:
         recipes = [r for r in recipes if r.get("practical")]
         if not recipes:
-            print(f"No recipes scored >= {PRACTICAL_THRESHOLD}. "
-                  "Try `pot-scraper fetch --limit 15` for more.")
+            print(f"No recipes scored >= {PRACTICAL_THRESHOLD}.")
             return None
     return recipes
 
 
 def cmd_random(args):
-    recipes = _pool(args.practical)
+    recipes = _pool(args.practical, args.cuisine)
     if recipes is None:
         return 1
     _print_recipe(random.choice(recipes), full=not args.short)
@@ -186,13 +247,13 @@ def cmd_random(args):
 
 
 def cmd_list(args):
-    recipes = _pool(args.practical)
+    recipes = _pool(args.practical, args.cuisine)
     if recipes is None:
         return 1
     recipes = sorted(recipes, key=lambda r: -r["score"])[: args.limit]
     for r in recipes:
-        flag = "practical" if r.get("practical") else "         "
-        print(f"  {r['id']}  {r['score']}/10  {flag}  {r['title'][:50]}")
+        cz = (r.get("cuisine") or "")[:9]
+        print(f"  {r['id']}  {r['score']}/10  {cz:9s}  {r['title'][:46]}")
     print(f"\n{len(recipes)} shown. `pot-scraper show <id>` for details.")
     return 0
 
@@ -252,16 +313,22 @@ def build_parser():
     f.add_argument("--query", default="cookery", help="keyword search term (default: cookery)")
     f.add_argument("--topic", help="Gutenberg bookshelf/subject, e.g. 'cooking' (~487 books)")
     f.add_argument("--broad", action="store_true", help="sweep the whole cooking shelf + extras")
+    f.add_argument("--mealdb", action="store_true", help="pull authentic regional recipes from TheMealDB")
     f.add_argument("--limit", type=int, default=8, help="max books to ingest for --query/--topic")
     f.set_defaults(func=cmd_fetch)
 
+    cu = sub.add_parser("curate", help="tag by cuisine and drop generic Anglo-American recipes")
+    cu.set_defaults(func=cmd_curate)
+
     r = sub.add_parser("random", help="show a random recipe")
     r.add_argument("--practical", action="store_true", help="only cookable-from-local recipes")
+    r.add_argument("--cuisine", help="filter by cuisine, e.g. French, Italian, Thai")
     r.add_argument("--short", action="store_true", help="hide the original body text")
     r.set_defaults(func=cmd_random)
 
     l = sub.add_parser("list", help="list recipes by score")
     l.add_argument("--practical", action="store_true", help="only practical recipes")
+    l.add_argument("--cuisine", help="filter by cuisine, e.g. French, Italian, Thai")
     l.add_argument("--limit", type=int, default=25)
     l.set_defaults(func=cmd_list)
 
