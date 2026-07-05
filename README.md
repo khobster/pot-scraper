@@ -50,7 +50,6 @@ pot-scraper random --practical    # a random cookable recipe + shopping list
 pot-scraper show <id>             # one recipe in full
 
 # Cook: modernize a specific recipe with Claude (needs an API key)
-export ANTHROPIC_API_KEY=sk-ant-...
 pot-scraper modernize <id>
 ```
 
@@ -77,6 +76,18 @@ measures, oven temperatures in Fahrenheit, substitutions for anything archaic,
 and a store-by-store shopping list. Scoring the whole library is free; you only
 spend an API call on a recipe you actually want to cook. Model defaults to
 `claude-opus-4-8` (override with `POT_SCRAPER_MODEL`).
+
+**Set your API key once, locally.** Put it in `~/.pot-scraper/.env`:
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+That file lives outside the repo and is never committed — so your key can't
+leak. (Don't hardcode keys into source, especially in a public repo: GitHub and
+Anthropic auto-scan public repos and revoke exposed keys.) `POT_SCRAPER_MODEL`
+can also go in this file. Alternatively, just `export ANTHROPIC_API_KEY=...` in
+your shell.
 
 ## Data
 

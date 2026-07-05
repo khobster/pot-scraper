@@ -81,7 +81,11 @@ def modernize(recipe):
             output_format=schema,
         )
     except anthropic.AuthenticationError:
-        raise ModernizeError("ANTHROPIC_API_KEY is missing or invalid.")
+        raise ModernizeError(
+            "ANTHROPIC_API_KEY is missing or invalid. Put it in "
+            "~/.pot-scraper/.env  (line:  ANTHROPIC_API_KEY=sk-ant-...) "
+            "or export it in your shell."
+        )
     except anthropic.APIError as e:
         raise ModernizeError(f"Claude API error: {e}")
 

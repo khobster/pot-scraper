@@ -19,3 +19,19 @@ USER_AGENT = "pot-scraper/0.1 (+https://github.com/khobster/pot-scraper)"
 
 def ensure_dirs():
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def load_env():
+    """Load KEY=VALUE lines from ~/.pot-scraper/.env into the environment
+    (without overriding anything already set). This lives OUTSIDE the repo on
+    purpose so a secret like ANTHROPIC_API_KEY can never be committed."""
+    env_file = CACHE_DIR / ".env"
+    if not env_file.exists():
+        return
+    for line in env_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key, val = key.strip(), val.strip().strip("'\"")
+        os.environ.setdefault(key, val)

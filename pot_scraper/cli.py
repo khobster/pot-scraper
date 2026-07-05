@@ -243,6 +243,8 @@ def build_parser():
 
 
 def main(argv=None):
+    from .config import load_env
+    load_env()  # pick up ~/.pot-scraper/.env (e.g. ANTHROPIC_API_KEY) if present
     args = build_parser().parse_args(argv)
     return args.func(args)
 
