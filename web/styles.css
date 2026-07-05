@@ -159,6 +159,14 @@ body {
 .modern ul, .modern ol { margin: 0; padding-left: 22px; }
 .modern li { margin-bottom: 6px; }
 .modern ol li { margin-bottom: 10px; }
+.method { margin-top: 18px; border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--card); }
+.method-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.method-name { font: 700 15px/1.2 inherit; color: var(--ink); }
+.method-time { font: 600 12px/1 "SF Mono", ui-monospace, monospace; color: var(--tomato-dk); background: #f6e6df; padding: 4px 8px; border-radius: 8px; white-space: nowrap; }
+.method ol { margin: 0; padding-left: 20px; }
+.method p { margin: 0; color: #453b33; }
+.method.af-no { opacity: .82; border-style: dashed; }
+.method.af-yes .method-time { color: #2f6b33; background: #e6f0e2; }
 .err { color: var(--tomato-dk); background: #fbeee6; border: 1px solid #edc9b3; border-radius: 10px; padding: 12px; margin-top: 16px; }
 
 .foot { padding: 24px 0 50px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-top: 1px solid var(--line); }

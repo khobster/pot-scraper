@@ -3,7 +3,7 @@
 
 // Modernize endpoints, tried in order: Cloudflare Pages Function first, then
 // Netlify. Whichever platform the site is deployed on answers; the other 404s.
-const ENDPOINTS = ['/api/modernize', '/.netlify/functions/modernize'];
+const ENDPOINTS = ['/api/cook', '/.netlify/functions/cook'];
 const state = { all: [], view: [], store: 'all', cuisine: 'all', q: '' };
 
 const $ = (s) => document.querySelector(s);
@@ -116,9 +116,9 @@ function openDetail(r) {
     ${hard}
     ${measures}
     <div class="block"><h4>original recipe</h4><div class="orig">${esc(r.body)}</div></div>
-    <button class="modernize-btn" id="mbtn">✨ Modernize this recipe with Claude</button>
+    <button class="modernize-btn" id="mbtn">🍲 Cook it 3 ways — Instant Pot / Air Fryer / Stovetop</button>
     <div id="modernOut"></div>`;
-  $('#mbtn').onclick = () => runModernize(r);
+  $('#mbtn').onclick = () => runCook(r);
   detail.hidden = false;
   document.body.style.overflow = 'hidden';
 }
@@ -128,12 +128,12 @@ $('#close').onclick = closeDetail;
 detail.onclick = (e) => { if (e.target === detail) closeDetail(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !detail.hidden) closeDetail(); });
 
-// ---- modernize (calls the Netlify function) ----
-async function runModernize(r) {
+// ---- cook it 3 ways (calls the serverless function) ----
+async function runCook(r) {
   const btn = $('#mbtn');
   const out = $('#modernOut');
   btn.disabled = true;
-  btn.textContent = '✨ Modernizing… (a few seconds)';
+  btn.textContent = '🍲 Working it out… (a few seconds)';
   out.innerHTML = '';
   try {
     const payload = JSON.stringify({ title: r.title, body: r.body, source: r.source_title });
@@ -147,28 +147,47 @@ async function runModernize(r) {
       if (!res.ok || !json.ok) throw new Error(json.error || 'request failed');
       break;
     }
-    if (!json) throw new Error('no modernize function found on this deploy');
-    out.innerHTML = modernHTML(json.data);
-    btn.textContent = '✨ Modernize again';
+    if (!json) throw new Error('no cook function found on this deploy');
+    out.innerHTML = cookHTML(json.data);
+    btn.textContent = '🍲 Cook it 3 ways again';
   } catch (e) {
-    out.innerHTML = `<div class="err">Couldn’t modernize: ${esc(e.message)}.<br>
-      (If this is a fresh deploy, make sure <b>ANTHROPIC_API_KEY</b> is set in Netlify’s environment variables.)</div>`;
-    btn.textContent = '✨ Try again';
+    out.innerHTML = `<div class="err">Couldn’t do it: ${esc(e.message)}.<br>
+      (If this is a fresh deploy, make sure <b>ANTHROPIC_API_KEY</b> is set in the site’s environment variables.)</div>`;
+    btn.textContent = '🍲 Try again';
   } finally {
     btn.disabled = false;
   }
 }
 
-function modernHTML(m) {
+function methodBlock(icon, name, time, steps) {
+  const li = (steps || []).map((s) => `<li>${esc(s)}</li>`).join('');
+  return `<div class="method">
+    <div class="method-head"><span class="method-name">${icon} ${name}</span>
+      ${time ? `<span class="method-time">${esc(time)}</span>` : ''}</div>
+    <ol>${li}</ol>
+  </div>`;
+}
+
+function cookHTML(m) {
   const ing = (m.ingredients || []).map((i) => `<li>${esc(i)}</li>`).join('');
-  const steps = (m.steps || []).map((s) => `<li>${esc(s)}</li>`).join('');
   const shop = (m.shopping_list || []).map((s) => `<li>${esc(s.item)} <span class="pill">${esc(s.store)}</span></li>`).join('');
+  const ip = m.instant_pot || {};
+  const st = m.stovetop_oven || {};
+  const af = m.air_fryer || {};
+  const afClass = af.suitable ? 'af-yes' : 'af-no';
   return `<div class="modern">
-    <h3>${esc(m.title || 'Modernized')}</h3>
+    <h3>${esc(m.dish || 'Recipe')}</h3>
     <div class="serves">serves ${esc(m.servings || '?')}</div>
     <div class="block"><h4>ingredients</h4><ul>${ing}</ul></div>
-    <div class="block"><h4>steps</h4><ol>${steps}</ol></div>
-    <div class="block"><h4>shopping list</h4><ul>${shop}</ul></div>
+    ${methodBlock('⚡', 'Instant Pot', ip.total_time, ip.steps)}
+    <div class="method ${afClass}">
+      <div class="method-head"><span class="method-name">🌀 Air-Fryer Lid</span>
+        <span class="method-time">${af.suitable ? 'useful here' : 'skip for this dish'}</span></div>
+      <p>${esc(af.note || '')}</p>
+    </div>
+    ${methodBlock('🔥', 'Stovetop / Oven', st.total_time, st.steps)}
+    ${m.best_method ? `<div class="block"><h4>best method</h4><p>${esc(m.best_method)}</p></div>` : ''}
+    <div class="block"><h4>shopping list · Charleston</h4><ul>${shop}</ul></div>
     ${m.notes ? `<div class="block"><h4>notes</h4><p>${esc(m.notes)}</p></div>` : ''}
   </div>`;
 }

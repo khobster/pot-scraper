@@ -5,7 +5,7 @@ import random
 import sys
 import textwrap
 
-from . import sources, parse, store, mealdb
+from . import sources, parse, store, mealdb, spoonacular
 from .cuisine import cuisine_of_book
 from .score import score_recipe, shopping_list
 from .config import PRACTICAL_THRESHOLD
@@ -148,6 +148,32 @@ def cmd_mealdb(args):
     return 0
 
 
+def cmd_spoonacular(args):
+    print("Pulling Instant-Pot-friendly recipes from Spoonacular...")
+    try:
+        raw = spoonacular.fetch_ip_friendly()
+    except Exception as e:
+        print(f"Spoonacular fetch failed: {e}")
+        return 1
+    new_recipes = []
+    for m in raw:
+        rec = spoonacular.to_recipe(m)
+        if not rec:
+            continue
+        score_recipe(rec)
+        rec["id"] = store.recipe_id("spoonacular", rec["source_meal_id"])
+        new_recipes.append(rec)
+    kept = [r for r in store.load_recipes() if r.get("source_id") != "spoonacular"]
+    store.save_recipes(kept)
+    added = store.upsert_many(new_recipes)
+    from collections import Counter
+    by = Counter(r["cuisine"] for r in new_recipes)
+    print(f"Added {added} Spoonacular recipes. Top cuisines: " +
+          ", ".join(f"{c} {n}" for c, n in by.most_common(10)))
+    print(f"Library now holds {len(store.load_recipes())}.")
+    return 0
+
+
 def cmd_curate(args):
     """Tag every recipe with a cuisine and drop generic Anglo-American books."""
     recipes = store.load_recipes()
@@ -174,6 +200,8 @@ def cmd_fetch(args):
 
     if args.mealdb:
         return cmd_mealdb(args)
+    if args.spoonacular:
+        return cmd_spoonacular(args)
     if args.broad:
         print("Broad sweep of Project Gutenberg's cooking shelves...")
         new_recipes = []
@@ -314,6 +342,7 @@ def build_parser():
     f.add_argument("--topic", help="Gutenberg bookshelf/subject, e.g. 'cooking' (~487 books)")
     f.add_argument("--broad", action="store_true", help="sweep the whole cooking shelf + extras")
     f.add_argument("--mealdb", action="store_true", help="pull authentic regional recipes from TheMealDB")
+    f.add_argument("--spoonacular", action="store_true", help="pull Instant-Pot-friendly recipes from Spoonacular (needs SPOONACULAR_API_KEY)")
     f.add_argument("--limit", type=int, default=8, help="max books to ingest for --query/--topic")
     f.set_defaults(func=cmd_fetch)
 
