@@ -16,14 +16,31 @@ _session = requests.Session()
 _session.headers.update({"User-Agent": USER_AGENT})
 
 
-def search_cookbooks(query="cookery", limit=8):
+# A curated sweep for `fetch --broad`. `topic` hits Gutenberg's curated
+# "Cooking" bookshelf + subjects (hundreds of books); `search` mops up extras
+# the shelf misses. Tuned from live Gutendex counts.
+BROAD_PLAN = [
+    ("topic", "cooking", 500),
+    ("topic", "cookbook", 200),
+    ("search", "wine", 45),
+    ("search", "kitchen", 35),
+    ("search", "receipts", 30),   # old spelling of "recipes"
+    ("search", "candy", 25),
+    ("search", "canning", 15),
+    ("search", "vegetarian", 10),
+]
+
+
+def search_cookbooks(query="cookery", limit=8, by="search"):
     """Return up to `limit` cookbook records that have a plaintext format.
 
-    Each record: {id, title, author, text_url}.
-    Walks Gutendex pages until we have enough.
+    `by` is "search" (keyword) or "topic" (Gutenberg bookshelf/subject — far
+    higher yield: topic=cooking alone is ~487 books).
+    Each record: {id, title, author, text_url}. Walks Gutendex pages.
     """
+    param = "topic" if by == "topic" else "search"
     out = []
-    url = f"{GUTENDEX}?search={requests.utils.quote(query)}"
+    url = f"{GUTENDEX}?{param}={requests.utils.quote(query)}"
     while url and len(out) < limit:
         r = _session.get(url, timeout=30)
         r.raise_for_status()

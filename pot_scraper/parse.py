@@ -13,9 +13,14 @@ import re
 # "No. 12." / "12." / "CHAPTER" style prefixes we strip off titles.
 _NUM_PREFIX = re.compile(r"^(no\.?\s*\d+[\.\)]?\s*|\d+[\.\)]\s*)", re.I)
 _SKIP_TITLES = re.compile(
-    r"^(contents|index|preface|introduction|chapter|appendix|glossary|"
-    r"illustrations|footnotes?|transcriber)", re.I
+    r"^(contents|index|table of|preface|introduction|chapter|appendix|"
+    r"glossary|illustrations|footnotes?|transcriber|section|part\b)", re.I
 )
+# A "weak" title carries no dish info: bare Roman numerals, plain numbers, or a
+# stray letter. Common in old numbered cookbooks (esp. Apicius). We rebuild
+# these from the recipe body so browsing isn't a wall of "Xxix".
+_WEAK_TITLE = re.compile(r"^([ivxlcdm]+|\d+|[a-z])\.?$", re.I)
+_LEAD_JUNK = re.compile(r"^[^A-Za-z0-9]+")
 
 
 def _alpha_upper_ratio(s):
@@ -63,6 +68,20 @@ def _clean_title(s):
     return s
 
 
+def _title_from_body(body):
+    """Build a readable title from the first substantive line of a recipe whose
+    own heading was just a numeral."""
+    for line in body.splitlines():
+        line = line.strip().strip("_").strip()
+        words = line.split()
+        if len(words) >= 3:
+            title = " ".join(words[:9]).rstrip(".,;:")
+            if len(title) > 60:
+                title = title[:57].rstrip() + "..."
+            return title
+    return None
+
+
 def _looks_like_toc(body):
     """Table-of-contents / index blocks are full of page-number lines and dot
     leaders. Detect and reject them so they don't score as recipes."""
@@ -84,8 +103,9 @@ def extract_recipes(text):
         prev_blank = (i == 0) or (lines[i - 1].strip() == "")
         next_blank = (i + 1 >= n) or (lines[i + 1].strip() == "")
         if _is_heading(line, prev_blank, next_blank):
-            # normalize before the skip check so "_Contents_" is caught
-            title = _NUM_PREFIX.sub("", line.strip().strip("_").strip())
+            # strip leading markup/brackets so "_Contents_" and "[Index]..."
+            # are caught by the skip filter
+            title = _NUM_PREFIX.sub("", _LEAD_JUNK.sub("", line.strip()))
             if _SKIP_TITLES.match(title):
                 continue
             heads.append(i)
@@ -97,9 +117,12 @@ def extract_recipes(text):
         body = "\n".join(lines[start + 1:end]).strip()
         # collapse runs of blank lines
         body = re.sub(r"\n{3,}", "\n\n", body)
-        if not title or len(body) < 80:
+        if len(body) < 80 or _looks_like_toc(body):
             continue
-        if _looks_like_toc(body):
+        # numeral-only heading -> rebuild the title from the body
+        if not title or _WEAK_TITLE.match(title):
+            title = _title_from_body(body) or title
+        if not title:
             continue
         recipes.append({"title": title, "body": body})
     return recipes

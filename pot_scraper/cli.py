@@ -83,29 +83,23 @@ def _print_modern(m):
 
 # ---- commands --------------------------------------------------------------
 
-def cmd_fetch(args):
-    print(f"Searching Project Gutenberg for '{args.query}' cookbooks...")
-    books = sources.search_cookbooks(args.query, limit=args.limit)
-    if not books:
-        print("No cookbooks found.")
-        return 1
-
-    seen_books = store.load_books()
+def _ingest(query, limit, by, seen_books, quiet=False):
+    """Fetch + parse + score one query's books. Returns list of new recipes;
+    mutates seen_books."""
+    books = sources.search_cookbooks(query, limit=limit, by=by)
     new_recipes = []
     for b in books:
         tag = str(b["id"])
-        if tag in seen_books and not args.refetch:
-            print(f"  · skipping (already have) {b['title'][:55]}")
+        if tag in seen_books:
             continue
-        print(f"  · {b['title'][:55]} — {b['author']}")
         try:
             text = sources.download_text(b["text_url"])
         except Exception as e:  # network / format issues shouldn't kill the run
-            print(f"    ! download failed: {e}")
+            if not quiet:
+                print(f"    ! download failed ({b['title'][:40]}): {e}")
             continue
-        found = parse.extract_recipes(text)
         kept = 0
-        for rec in found:
+        for rec in parse.extract_recipes(text):
             score_recipe(rec)
             if rec["score"] == 0:
                 continue
@@ -116,13 +110,56 @@ def cmd_fetch(args):
             rec["source_url"] = f"https://www.gutenberg.org/ebooks/{b['id']}"
             new_recipes.append(rec)
             kept += 1
-        print(f"    {kept} cookable recipes")
         seen_books[tag] = b["title"]
+        if not quiet:
+            print(f"  · {b['title'][:52]:52s}  {kept} recipes")
+    return new_recipes
+
+
+def cmd_fetch(args):
+    seen_books = store.load_books()
+
+    if args.broad:
+        print("Broad sweep of Project Gutenberg's cooking shelves...")
+        new_recipes = []
+        for by, query, limit in sources.BROAD_PLAN:
+            print(f"\n[{by}={query}]")
+            new_recipes += _ingest(query, limit, by, seen_books)
+    elif args.topic:
+        print(f"Fetching Gutenberg topic shelf '{args.topic}'...")
+        new_recipes = _ingest(args.topic, args.limit, "topic", seen_books)
+    else:
+        print(f"Searching Project Gutenberg for '{args.query}'...")
+        new_recipes = _ingest(args.query, args.limit, "search", seen_books)
+
+    if not new_recipes and not seen_books:
+        print("No cookbooks found.")
+        return 1
 
     added = store.upsert_many(new_recipes)
     store.save_books(seen_books)
     total = len(store.load_recipes())
     print(f"\nAdded {added} new recipes. Library now holds {total}.")
+    return 0
+
+
+def cmd_rescore(args):
+    """Re-run scoring over the whole cached library (after a scoring change).
+    No re-download."""
+    recipes = store.load_recipes()
+    if not recipes:
+        print("No recipes yet. Run `pot-scraper fetch` first.")
+        return 1
+    kept = []
+    for r in recipes:
+        score_recipe(r)          # recomputes ingredients/hard/measures/score
+        if r["score"] > 0:
+            kept.append(r)
+    store.save_recipes(kept)
+    dropped = len(recipes) - len(kept)
+    practical = sum(1 for r in kept if r.get("practical"))
+    print(f"Rescored {len(kept)} recipes "
+          f"({dropped} dropped as non-recipes). {practical} now practical.")
     return 0
 
 
@@ -212,9 +249,10 @@ def build_parser():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     f = sub.add_parser("fetch", help="scrape + score cookbooks from Project Gutenberg")
-    f.add_argument("--query", default="cookery", help="search term (default: cookery)")
-    f.add_argument("--limit", type=int, default=8, help="number of books to ingest")
-    f.add_argument("--refetch", action="store_true", help="re-ingest books already seen")
+    f.add_argument("--query", default="cookery", help="keyword search term (default: cookery)")
+    f.add_argument("--topic", help="Gutenberg bookshelf/subject, e.g. 'cooking' (~487 books)")
+    f.add_argument("--broad", action="store_true", help="sweep the whole cooking shelf + extras")
+    f.add_argument("--limit", type=int, default=8, help="max books to ingest for --query/--topic")
     f.set_defaults(func=cmd_fetch)
 
     r = sub.add_parser("random", help="show a random recipe")
@@ -238,6 +276,9 @@ def build_parser():
 
     st = sub.add_parser("stats", help="library summary")
     st.set_defaults(func=cmd_stats)
+
+    rs = sub.add_parser("rescore", help="re-run scoring over the cached library")
+    rs.set_defaults(func=cmd_rescore)
 
     return p
 

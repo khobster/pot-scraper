@@ -39,9 +39,11 @@ Python 3.10+. Core install only needs `requests`.
 ## Use
 
 ```bash
-# Ingest and score cookbooks (default: 8 books matching "cookery")
-pot-scraper fetch
-pot-scraper fetch --query "bread baking" --limit 15
+# Ingest and score cookbooks
+pot-scraper fetch --broad              # sweep Gutenberg's whole cooking shelf (~500 books)
+pot-scraper fetch --topic cooking --limit 200   # the curated "Cooking" bookshelf
+pot-scraper fetch --query "bread baking" --limit 15   # keyword search
+pot-scraper rescore                    # re-score the library after a scoring tweak
 
 # Browse
 pot-scraper stats                 # library summary
@@ -64,10 +66,23 @@ Each recipe's text is scanned against a Charleston pantry lexicon
 - Prose that doesn't read like cooking instructions (magazine essays, indexes)
   is rejected so it never scores as a recipe.
 
-A recipe scoring **7/10 or higher** is flagged `practical` — cookable from a
-normal local grocery run. Archaic *measures* ("a gill", "butter the size of an
-egg", "quick oven") don't hurt the score; they're exactly what the `modernize`
-step converts.
+The score rewards **sourceability and simplicity** and docks for what makes a
+recipe a project instead of dinner:
+
+- each **hard-to-source** ingredient: −2.5
+- **ingredient breadth** (a 15-item banquet dish isn't a weeknight cook): up to −5.5
+- **method length** (long, fiddly, multi-stage): up to −4.5
+- **archaic-measure friction**: light, since `modernize` fixes it
+
+A recipe scoring **7/10 or higher** is flagged `practical`. In a ~500-book
+library that lands around 75% of recipes — a real filter, not a rubber stamp:
+plain boiled beef and plum broth score 9–10, while a 40-ingredient banquet
+spread or a marrow-and-sweetbread pie sinks to 1–3. Archaic *measures* ("a
+gill", "butter the size of an egg", "quick oven") barely dent the score; they're
+exactly what the `modernize` step converts.
+
+Changed the pantry or scoring? `pot-scraper rescore` re-scores the whole cached
+library in place — no re-downloading.
 
 ## Modernize (on demand)
 

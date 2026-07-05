@@ -41,6 +41,7 @@ def score_recipe(recipe):
     found = scan(recipe["title"] + "\n" + body)
     avail = found["available"]
     hard = found["hard"]
+    measures = found["measures"]
 
     if len(avail) < 2 or _recipe_signal(body) < 3:
         # Too few recognizable ingredients, or prose that doesn't read like
@@ -48,11 +49,40 @@ def score_recipe(recipe):
         # essay that merely mentions food) — not a cookable recipe.
         score = 0
     else:
-        score = 10
-        score -= 2 * len(hard)             # each hard-to-source item stings
-        if len(avail) < 3:
-            score -= 1                      # thin ingredient list
-        score = max(1, min(10, score))
+        # "Practical" = you can source it locally AND cook it without a project.
+        # Start at 10 and dock for the things that make that harder.
+        n_ing = len(avail) + len(hard)
+        words = len(body.split())
+        s = 10.0
+
+        # 1. Sourceability — each hard-to-find item is a real blocker/substitution.
+        s -= 2.5 * len(hard)
+
+        # 2. Simplicity — a 15-ingredient banquet dish isn't a weeknight cook,
+        #    even if every ingredient is at Walmart.
+        if n_ing >= 16:
+            s -= 5.5
+        elif n_ing >= 12:
+            s -= 4
+        elif n_ing >= 9:
+            s -= 2.5
+        elif n_ing >= 6:
+            s -= 1
+
+        # 3. Effort — long method sections mean fiddly, multi-stage recipes.
+        if words > 600:
+            s -= 4.5
+        elif words > 400:
+            s -= 3
+        elif words > 250:
+            s -= 1.5
+        elif words > 130:
+            s -= 0.5
+
+        # 4. Archaic-measure friction — light touch, since `modernize` fixes it.
+        s -= 0.5 * min(len(measures), 4)
+
+        score = max(1, min(10, round(s)))
 
     recipe["ingredients"] = [{"name": n, "stores": s} for n, s in avail]
     recipe["hard"] = [{"name": n, "reason": r} for n, r in hard]
