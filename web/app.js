@@ -66,7 +66,7 @@ const revealIO = new IntersectionObserver((entries) => {
 }, { rootMargin: '0px 0px -6% 0px' });
 
 // ---- load (two menus: the seasons recipes + the laundromat legends) ----
-const FILES = { seasons: 'data/recipes.json', laundromat: 'data/french-laundromat.json' };
+const FILES = { seasons: 'data/recipes.json', laundromat: 'data/pot-legends.json' };
 function ensureData(mode, cb) {
   if (state.data[mode].length) return cb();
   fetch(FILES[mode]).then((r) => r.json())
@@ -260,8 +260,8 @@ function cookHTML(m) {
 function setMode(mode) {
   state.mode = mode;
   document.body.classList.toggle('laundromat', mode === 'laundromat');
-  $('.dinner').textContent = mode === 'laundromat' ? 'THE FRENCH LAUNDROMAT' : 'DINNER';
-  $('#search').placeholder = mode === 'laundromat' ? 'find a legendary dish' : 'find a dish';
+  $('.dinner').textContent = mode === 'laundromat' ? 'THE INSTANT CLASSICS' : 'DINNER';
+  $('#search').placeholder = mode === 'laundromat' ? 'find a classic' : 'find a dish';
   state.q = ''; $('#search').value = '';
   window.scrollTo(0, 0);
   if (lenis) lenis.scrollTo(0, { immediate: true });
