@@ -1,5 +1,5 @@
-// pot*scraper — the menu. An endless, randomly-ordered list of dishes; click
-// one to get the recipe and cook it (Instant Pot or the traditional way).
+// pot*scraper — the menu. An endless, randomly-ordered menu of dishes styled
+// after the old Four Seasons card; click one for the recipe and cook it.
 
 const ENDPOINTS = ['/api/cook', '/.netlify/functions/cook'];
 const BATCH = 24;
@@ -11,6 +11,25 @@ const footNote = $('#foot-note');
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// dish "hero" — the ingredient the menu sets in CAPS (proteins first)
+const HEROES = ['beef', 'steak', 'brisket', 'chicken', 'pork', 'bacon', 'ham', 'sausage', 'chorizo',
+  'lamb', 'mutton', 'turkey', 'duck', 'salmon', 'cod', 'tuna', 'fish', 'shrimp', 'crab', 'lobster',
+  'tofu', 'chickpea', 'lentil', 'bean', 'mushroom', 'eggplant', 'potato', 'pasta', 'rice'];
+
+function heroTitle(title, ingredients) {
+  const extra = (ingredients || []).map((i) => i.name.toLowerCase());
+  const words = HEROES.concat(extra.filter((w) => !HEROES.includes(w)));
+  for (const w of words) {
+    const re = new RegExp('\\b(' + w.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&') + 's?)\\b', 'i');
+    const m = re.exec(title);
+    if (m) {
+      const s = m.index, e = s + m[0].length;
+      return esc(title.slice(0, s)) + '<span class="hero">' + esc(title.slice(s, e)) + '</span>' + esc(title.slice(e));
+    }
+  }
+  return esc(title);
+}
+
 function shuffle(a) {
   const arr = a.slice();
   for (let i = arr.length - 1; i > 0; i--) {
@@ -19,6 +38,16 @@ function shuffle(a) {
   }
   return arr;
 }
+
+// date line, menu-style ("SUMMER 2026 · FRIDAY, JULY 5")
+(function setDate() {
+  const now = new Date();
+  const seasons = ['WINTER', 'WINTER', 'SPRING', 'SPRING', 'SPRING', 'SUMMER', 'SUMMER', 'SUMMER', 'AUTUMN', 'AUTUMN', 'AUTUMN', 'WINTER'];
+  const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+  const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+  const el = $('#dateline');
+  if (el) el.textContent = `${seasons[now.getMonth()]} ${now.getFullYear()} · ${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
+})();
 
 // ---- load ----
 fetch('data/recipes.json')
@@ -41,12 +70,11 @@ function reset() {
   state.i = 0;
   footNote.textContent = state.q ? '' : 'the menu never ends · scroll on';
   renderBatch();
-  // if the first batch didn't fill the screen, keep going
   requestAnimationFrame(fillViewport);
 }
 
 function fillViewport() {
-  if (document.body.scrollHeight <= window.innerHeight + 200 && state.deck.length) {
+  if (document.body.scrollHeight <= window.innerHeight + 300 && state.deck.length) {
     if (renderBatch()) requestAnimationFrame(fillViewport);
   }
 }
@@ -60,8 +88,7 @@ function renderBatch() {
       state.deck = shuffle(state.all);   // endless: reshuffle and keep going
       state.i = 0;
     }
-    const r = state.deck[state.i++];
-    frag.appendChild(entryEl(r));
+    frag.appendChild(entryEl(state.deck[state.i++]));
   }
   menu.appendChild(frag);
   return true;
@@ -70,19 +97,17 @@ function renderBatch() {
 function entryEl(r) {
   const el = document.createElement('article');
   el.className = 'entry';
-  const desc = r.ingredients.slice(0, 4).map((i) => esc(i.name)).join(' · ');
-  const flag = r.cuisine ? `<span class="flag">${esc(r.cuisine)}</span>` : '';
-  el.innerHTML = `<div class="name">${esc(r.title)}</div>
-    ${desc ? `<div class="desc">${desc}</div>` : ''}
-    ${flag ? `<div>${flag}</div>` : ''}`;
+  const desc = r.ingredients.slice(0, 3).map((i) => esc(i.name)).join(', ');
+  const flag = r.cuisine ? `<div class="flag">${esc(r.cuisine)}</div>` : '';
+  el.innerHTML = `<div class="name">${heroTitle(r.title, r.ingredients)}</div>
+    ${desc ? `<div class="desc">${desc}</div>` : ''}${flag}`;
   el.onclick = () => openDetail(r);
   return el;
 }
 
-// infinite scroll
 new IntersectionObserver((entries) => {
   if (entries[0].isIntersecting && state.all.length) renderBatch();
-}, { rootMargin: '600px' }).observe($('#sentinel'));
+}, { rootMargin: '700px' }).observe($('#sentinel'));
 
 // ---- detail ----
 const detail = $('#detail');
@@ -100,11 +125,9 @@ function openDetail(r) {
   const cz = r.cuisine ? `<span class="d-cz">${esc(r.cuisine)}</span>` : '';
   const hard = r.hard && r.hard.length
     ? `<div class="block"><div class="warn"><b>harder to source:</b> ${r.hard.map((h) => esc(h.name)).join(', ')}</div></div>` : '';
-  const srcLabel = r.source_title && r.source_title.startsWith('TheMealDB') ? 'TheMealDB'
-    : (r.source_title === 'Spoonacular' ? 'source' : 'source');
   detailBody.innerHTML = `
     ${img}
-    <h2 class="d-title">${esc(r.title)}</h2>
+    <h2 class="d-title">${heroTitle(r.title, r.ingredients)}</h2>
     ${cz}
     <p class="d-src"><a href="${esc(r.source_url)}" target="_blank" rel="noopener">original recipe ↗</a></p>
     <div class="divider"></div>
@@ -116,6 +139,7 @@ function openDetail(r) {
   $('#mbtn').onclick = () => runCook(r);
   detail.hidden = false;
   document.body.style.overflow = 'hidden';
+  detail.scrollTop = 0;
 }
 
 function closeDetail() { detail.hidden = true; document.body.style.overflow = ''; }
@@ -123,7 +147,7 @@ $('#close').onclick = closeDetail;
 detail.onclick = (e) => { if (e.target === detail) closeDetail(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !detail.hidden) closeDetail(); });
 
-// ---- cook it (calls the serverless function) ----
+// ---- cook it ----
 async function runCook(r) {
   const btn = $('#mbtn'), out = $('#cookOut');
   btn.disabled = true;
