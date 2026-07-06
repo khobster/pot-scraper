@@ -152,7 +152,13 @@ body.laundromat {
 }
 body.laundromat .trees { display: none; }
 body.laundromat .toggle { background: var(--red-dk); color: #fff; }
-body.laundromat .dinner { letter-spacing: .02em; font-size: clamp(17px, 6vw, 40px); white-space: nowrap; }
+body.laundromat .dinner {
+  font-family: "BBH Bartle", "Lora", serif;
+  font-weight: 400;
+  letter-spacing: .01em;
+  font-size: clamp(30px, 8.5vw, 62px);
+  white-space: nowrap;
+}
 body.laundromat .entry .name {
   text-transform: uppercase; letter-spacing: .11em; font-weight: 500;
   font-size: clamp(19px, 3.5vw, 25px);

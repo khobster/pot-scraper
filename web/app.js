@@ -260,7 +260,7 @@ function cookHTML(m) {
 function setMode(mode) {
   state.mode = mode;
   document.body.classList.toggle('laundromat', mode === 'laundromat');
-  $('.dinner').textContent = mode === 'laundromat' ? 'THE INSTANT CLASSICS' : 'DINNER';
+  $('.dinner').textContent = mode === 'laundromat' ? 'THE LAUNDROMAT' : 'DINNER';
   $('#search').placeholder = mode === 'laundromat' ? 'find a classic' : 'find a dish';
   state.q = ''; $('#search').value = '';
   window.scrollTo(0, 0);
