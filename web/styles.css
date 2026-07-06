@@ -152,7 +152,7 @@ body.laundromat {
 }
 body.laundromat .trees { display: none; }
 body.laundromat .toggle { background: var(--red-dk); color: #fff; }
-body.laundromat .dinner { letter-spacing: .14em; font-size: clamp(26px, 5.5vw, 44px); }
+body.laundromat .dinner { letter-spacing: .02em; font-size: clamp(17px, 6vw, 40px); white-space: nowrap; }
 body.laundromat .entry .name {
   text-transform: uppercase; letter-spacing: .11em; font-weight: 500;
   font-size: clamp(19px, 3.5vw, 25px);
