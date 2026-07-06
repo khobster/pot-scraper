@@ -127,3 +127,40 @@ body {
 .pill { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; font-style: italic; }
 .err { color: var(--red-dk); background: rgba(176,52,42,.08); border: 1px solid rgba(176,52,42,.3); border-radius: 3px; padding: 12px; margin-top: 16px; text-align: center; }
 
+/* ---- the clothespin toggle ---- */
+.toggle {
+  position: fixed; top: 16px; right: 16px; z-index: 50;
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--sheet); color: var(--red-dk);
+  cursor: pointer; display: grid; place-items: center;
+  box-shadow: 0 2px 10px rgba(0,0,0,.1); transition: transform .2s, background .2s;
+}
+.toggle .pin { width: 20px; height: 27px; transform: rotate(14deg); }
+.toggle:hover { transform: scale(1.07) rotate(-5deg); }
+.pin-sm { height: .92em; width: auto; vertical-align: -.13em; margin-right: 4px; }
+
+/* ---- FRENCH LAUNDROMAT mode: flip the palette to white + navy ---- */
+body.laundromat {
+  --ink: #16223f;
+  --muted: #66708a;
+  --line: #d3d9e6;
+  --red: #1c3a6b;        /* navy stands in for the menu red */
+  --red-dk: #14274c;
+  --sheet: #ffffff;
+  --kraft: #ffffff;
+  background: #fdfdfc;
+}
+body.laundromat .trees { display: none; }
+body.laundromat .toggle { background: var(--red-dk); color: #fff; }
+body.laundromat .dinner { letter-spacing: .14em; font-size: clamp(26px, 5.5vw, 44px); }
+body.laundromat .entry .name {
+  text-transform: uppercase; letter-spacing: .11em; font-weight: 500;
+  font-size: clamp(19px, 3.5vw, 25px);
+}
+body.laundromat .entry .desc { font-style: normal; color: #313b57; font-size: 18px; }
+.src-line { margin-top: 9px; font-size: 13px; letter-spacing: .09em; text-transform: uppercase; color: var(--red-dk); }
+.src-line .pin-sm { color: var(--red-dk); }
+body.laundromat .d-title { text-transform: uppercase; letter-spacing: .04em; font-weight: 500; }
+.d-source { text-align: center; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--red-dk); margin: 6px 0 0; }
+.d-desc { text-align: center; font-size: 20px; color: #2c3550; margin: 14px 0 0; line-height: 1.4; }
+

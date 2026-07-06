@@ -3,7 +3,9 @@
 
 const ENDPOINTS = ['/api/cook', '/.netlify/functions/cook'];
 const BATCH = 24;
-const state = { all: [], deck: [], i: 0, q: '' };
+const PIN = '<svg class="pin-sm" viewBox="0 0 32 46" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="5" width="14" height="9" rx="4.5"/><path d="M12 14 11 42"/><path d="M20 14 21 42"/><circle cx="16" cy="19" r="3.1"/><path d="M11 27 21 27"/></svg>';
+const state = { mode: 'seasons', data: { seasons: [], laundromat: [] }, deck: [], i: 0, q: '' };
+const active = () => state.data[state.mode];
 
 const $ = (s) => document.querySelector(s);
 const menu = $('#menu');
@@ -63,17 +65,24 @@ const revealIO = new IntersectionObserver((entries) => {
   entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealIO.unobserve(e.target); } });
 }, { rootMargin: '0px 0px -6% 0px' });
 
-// ---- load ----
-fetch('data/recipes.json')
-  .then((r) => r.json())
-  .then((data) => { state.all = data; reset(); })
-  .catch(() => { footNote.textContent = 'could not load the menu.'; });
+// ---- load (two menus: the seasons recipes + the laundromat legends) ----
+const FILES = { seasons: 'data/recipes.json', laundromat: 'data/french-laundromat.json' };
+function ensureData(mode, cb) {
+  if (state.data[mode].length) return cb();
+  fetch(FILES[mode]).then((r) => r.json())
+    .then((d) => { state.data[mode] = d; cb(); })
+    .catch(() => { footNote.textContent = 'could not load the menu.'; });
+}
+ensureData('seasons', reset);
+ensureData('laundromat', () => {});   // preload so the toggle is instant
 
 function currentSet() {
   const q = state.q.trim().toLowerCase();
-  if (!q) return state.all;
-  return state.all.filter((r) => {
-    const hay = (r.title + ' ' + (r.cuisine || '') + ' ' + r.ingredients.map((i) => i.name).join(' ')).toLowerCase();
+  const all = active();
+  if (!q) return all;
+  return all.filter((r) => {
+    const extra = r.ingredients ? r.ingredients.map((i) => i.name).join(' ') : (r.description || '');
+    const hay = (r.title + ' ' + (r.cuisine || r.source || '') + ' ' + extra).toLowerCase();
     return hay.includes(q);
   });
 }
@@ -99,7 +108,7 @@ function renderBatch() {
   for (let n = 0; n < BATCH; n++) {
     if (state.i >= state.deck.length) {
       if (state.q) { footNote.textContent = '— end of matches —'; break; }
-      state.deck = shuffle(state.all);   // endless: reshuffle and keep going
+      state.deck = shuffle(active());   // endless: reshuffle and keep going
       state.i = 0;
     }
     frag.appendChild(entryEl(state.deck[state.i++]));
@@ -111,17 +120,25 @@ function renderBatch() {
 function entryEl(r) {
   const el = document.createElement('article');
   el.className = 'entry reveal';
-  const desc = r.ingredients.slice(0, 3).map((i) => esc(i.name)).join(', ');
-  const flag = r.cuisine ? `<div class="flag">${esc(r.cuisine)}</div>` : '';
-  el.innerHTML = `<div class="name">${heroTitle(r.title, r.ingredients)}</div>
-    ${desc ? `<div class="desc">${desc}</div>` : ''}${flag}`;
+  if (state.mode === 'laundromat') {
+    const desc = r.description ? `<div class="desc">${esc(r.description)}</div>` : '';
+    const src = r.fl
+      ? `<div class="src-line">${PIN}The French Laundry</div>`
+      : `<div class="src-line">${esc(r.source)}${r.year ? ' · ' + esc(r.year) : ''}</div>`;
+    el.innerHTML = `<div class="name">${esc(r.title)}</div>${desc}${src}`;
+  } else {
+    const desc = r.ingredients.slice(0, 3).map((i) => esc(i.name)).join(', ');
+    const flag = r.cuisine ? `<div class="flag">${esc(r.cuisine)}</div>` : '';
+    el.innerHTML = `<div class="name">${heroTitle(r.title, r.ingredients)}</div>
+      ${desc ? `<div class="desc">${desc}</div>` : ''}${flag}`;
+  }
   el.onclick = () => openDetail(r);
   revealIO.observe(el);
   return el;
 }
 
 new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting && state.all.length) renderBatch();
+  if (entries[0].isIntersecting && active().length) renderBatch();
 }, { rootMargin: '700px' }).observe($('#sentinel'));
 
 // ---- detail ----
@@ -136,6 +153,7 @@ function shopHTML(r) {
 }
 
 function openDetail(r) {
+  if (state.mode === 'laundromat') return openLaundromat(r);
   const cz = r.cuisine ? `<span class="d-cz">${esc(r.cuisine)}</span>` : '';
   const hard = r.hard && r.hard.length
     ? `<div class="block"><div class="warn"><b>harder to source:</b> ${r.hard.map((h) => esc(h.name)).join(', ')}</div></div>` : '';
@@ -156,6 +174,23 @@ function openDetail(r) {
   if (lenis) lenis.stop();          // freeze the page glide while the card is open
 }
 
+function openLaundromat(r) {
+  const src = r.fl ? `${PIN}The French Laundry` : `${esc(r.source)}${r.year ? ' · ' + esc(r.year) : ''}`;
+  const desc = r.description ? `<p class="d-desc">${esc(r.description)}</p>` : '';
+  detailBody.innerHTML = `
+    <h2 class="d-title">${esc(r.title)}</h2>
+    <p class="d-source">${src}</p>
+    ${desc}
+    <div class="divider"></div>
+    <button class="cook-btn" id="mbtn">🍲 Cook it — Instant Pot + the traditional way</button>
+    <div id="cookOut"></div>`;
+  $('#mbtn').onclick = () => runCook(r);
+  detail.hidden = false;
+  document.body.style.overflow = 'hidden';
+  detail.scrollTop = 0;
+  if (lenis) lenis.stop();
+}
+
 function closeDetail() {
   detail.hidden = true;
   document.body.style.overflow = '';
@@ -172,7 +207,14 @@ async function runCook(r) {
   btn.textContent = '🍲 Working it out…';
   out.innerHTML = '';
   try {
-    const payload = JSON.stringify({ title: r.title, body: r.body, source: r.source_title });
+    let body, source;
+    if (state.mode === 'laundromat') {
+      source = r.fl ? 'The French Laundry' : r.source;
+      body = r.description
+        ? r.description
+        : `A classic dish, "${r.title}", as served historically at ${r.source}${r.year ? ' (' + r.year + ')' : ''}. Reconstruct it faithfully.`;
+    } else { body = r.body; source = r.source_title; }
+    const payload = JSON.stringify({ title: r.title, body, source });
     let json = null;
     for (const url of ENDPOINTS) {
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
@@ -213,6 +255,19 @@ function cookHTML(m) {
     ${m.notes ? `<div class="block"><h4>notes</h4><p style="text-align:center">${esc(m.notes)}</p></div>` : ''}
   </div>`;
 }
+
+// ---- the clothespin toggle: swap menus ----
+function setMode(mode) {
+  state.mode = mode;
+  document.body.classList.toggle('laundromat', mode === 'laundromat');
+  $('.dinner').textContent = mode === 'laundromat' ? 'THE FRENCH LAUNDROMAT' : 'DINNER';
+  $('#search').placeholder = mode === 'laundromat' ? 'find a legendary dish' : 'find a dish';
+  state.q = ''; $('#search').value = '';
+  window.scrollTo(0, 0);
+  if (lenis) lenis.scrollTo(0, { immediate: true });
+  ensureData(mode, reset);
+}
+$('#toggle').onclick = () => setMode(state.mode === 'seasons' ? 'laundromat' : 'seasons');
 
 // ---- search ----
 let t;
