@@ -15,8 +15,8 @@ body {
   margin: 0;
   color: var(--ink);
   font-family: "EB Garamond", "Times New Roman", Georgia, serif;
-  font-size: 19px;
-  line-height: 1.4;
+  font-size: 22px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   /* mottled aged-paper look */
   background-color: var(--kraft);
@@ -49,25 +49,17 @@ body {
 .search::placeholder { color: var(--muted); letter-spacing: .12em; }
 .search:focus { border-bottom-color: var(--red); }
 
-/* ---- the menu: two columns like the printed card ---- */
-.menu {
-  max-width: 880px; margin: 26px auto 0; padding: 0 26px;
-  display: grid; grid-template-columns: 1fr 1fr; column-gap: 46px; row-gap: 4px;
-  position: relative;
-}
-.menu::before {  /* faint center rule between the two columns */
-  content: ""; position: absolute; top: 6px; bottom: 6px; left: 50%;
-  width: 1px; background: var(--line); opacity: .5;
-}
+/* ---- the menu: a single, centered column ---- */
+.menu { max-width: 600px; margin: 34px auto 0; padding: 0 26px; }
 .entry {
-  text-align: center; padding: 15px 6px; cursor: pointer;
+  text-align: center; padding: 26px 6px; cursor: pointer;
   border-bottom: 1px solid rgba(183,160,113,.4);
 }
 .entry:hover .name { color: var(--red-dk); }
-.entry .name { font-size: 21px; font-weight: 500; line-height: 1.2; transition: color .12s; }
+.entry .name { font-size: clamp(25px, 4.4vw, 32px); font-weight: 500; line-height: 1.2; transition: color .12s; }
 .entry .name .hero { text-transform: uppercase; letter-spacing: .03em; }
-.entry .desc { margin-top: 3px; color: var(--muted); font-style: italic; font-size: 14.5px; }
-.entry .flag { display: inline-block; margin-top: 5px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--red-dk); opacity: .8; }
+.entry .desc { margin-top: 6px; color: var(--muted); font-style: italic; font-size: 17.5px; }
+.entry .flag { display: inline-block; margin-top: 8px; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--red-dk); opacity: .8; }
 
 .sentinel { height: 40px; }
 
@@ -92,7 +84,6 @@ body {
 .close { position: absolute; top: 14px; right: 18px; font-size: 22px; background: none; border: none; color: var(--muted); cursor: pointer; line-height: 1; }
 .close:hover { color: var(--red); }
 
-.d-img { width: 100%; max-height: 290px; object-fit: cover; border-radius: 2px; margin-bottom: 22px; }
 .d-title { margin: 0 0 6px; font-size: clamp(28px, 6vw, 40px); font-weight: 600; line-height: 1.06; text-align: center; }
 .d-title .hero { text-transform: uppercase; }
 .d-cz { display: block; text-align: center; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--red-dk); margin-bottom: 14px; }
@@ -104,7 +95,7 @@ body {
 .block h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--red-dk); text-align: center; font-weight: 600; }
 .shop { display: grid; gap: 6px; text-align: center; }
 .shop .store { font-weight: 600; }
-.orig { white-space: pre-wrap; color: #40331d; font-size: 17.5px; }
+.orig { white-space: pre-wrap; color: #40331d; font-size: 19px; }
 .warn { background: rgba(176,52,42,.08); border: 1px solid rgba(176,52,42,.3); border-radius: 3px; padding: 10px 12px; font-size: 16px; text-align: center; }
 .warn b { color: var(--red-dk); }
 
@@ -130,7 +121,3 @@ body {
 .pill { font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 3px; padding: 1px 6px; font-style: italic; }
 .err { color: var(--red-dk); background: rgba(176,52,42,.08); border: 1px solid rgba(176,52,42,.3); border-radius: 3px; padding: 12px; margin-top: 16px; text-align: center; }
 
-@media (max-width: 620px) {
-  .menu { grid-template-columns: 1fr; }
-  .menu::before { display: none; }
-}

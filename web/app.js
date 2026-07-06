@@ -121,12 +121,10 @@ function shopHTML(r) {
 }
 
 function openDetail(r) {
-  const img = r.image ? `<img class="d-img" src="${esc(r.image)}" alt="">` : '';
   const cz = r.cuisine ? `<span class="d-cz">${esc(r.cuisine)}</span>` : '';
   const hard = r.hard && r.hard.length
     ? `<div class="block"><div class="warn"><b>harder to source:</b> ${r.hard.map((h) => esc(h.name)).join(', ')}</div></div>` : '';
   detailBody.innerHTML = `
-    ${img}
     <h2 class="d-title">${heroTitle(r.title, r.ingredients)}</h2>
     ${cz}
     <p class="d-src"><a href="${esc(r.source_url)}" target="_blank" rel="noopener">original recipe ↗</a></p>
