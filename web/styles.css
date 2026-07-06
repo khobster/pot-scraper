@@ -56,6 +56,12 @@ body {
   border-bottom: 1px solid rgba(183,160,113,.4);
 }
 .entry:hover .name { color: var(--red-dk); }
+/* gentle ease-in as each dish is reached */
+.entry.reveal { opacity: 0; transform: translateY(20px); transition: opacity .7s ease, transform .85s cubic-bezier(.16,.7,.2,1); }
+.entry.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .entry.reveal { opacity: 1; transform: none; transition: none; }
+}
 .entry .name { font-size: clamp(25px, 4.4vw, 32px); font-weight: 500; line-height: 1.2; transition: color .12s; }
 .entry .name .hero { text-transform: uppercase; letter-spacing: .03em; }
 .entry .desc { margin-top: 6px; color: var(--muted); font-style: italic; font-size: 17.5px; }

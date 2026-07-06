@@ -49,6 +49,20 @@ function shuffle(a) {
   if (el) el.textContent = `${seasons[now.getMonth()]} ${now.getFullYear()} · ${days[now.getDay()]}, ${months[now.getMonth()]} ${now.getDate()}`;
 })();
 
+// ---- premium weighted scroll (Lenis) — that "Mercedes glide" ----
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let lenis = null;
+if (window.Lenis && !reduceMotion) {
+  lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 1, touchMultiplier: 1.4 });
+  const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
+  requestAnimationFrame(raf);
+}
+
+// each dish eases into view as you reach it
+const revealIO = new IntersectionObserver((entries) => {
+  entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); revealIO.unobserve(e.target); } });
+}, { rootMargin: '0px 0px -6% 0px' });
+
 // ---- load ----
 fetch('data/recipes.json')
   .then((r) => r.json())
@@ -96,12 +110,13 @@ function renderBatch() {
 
 function entryEl(r) {
   const el = document.createElement('article');
-  el.className = 'entry';
+  el.className = 'entry reveal';
   const desc = r.ingredients.slice(0, 3).map((i) => esc(i.name)).join(', ');
   const flag = r.cuisine ? `<div class="flag">${esc(r.cuisine)}</div>` : '';
   el.innerHTML = `<div class="name">${heroTitle(r.title, r.ingredients)}</div>
     ${desc ? `<div class="desc">${desc}</div>` : ''}${flag}`;
   el.onclick = () => openDetail(r);
+  revealIO.observe(el);
   return el;
 }
 
@@ -138,9 +153,14 @@ function openDetail(r) {
   detail.hidden = false;
   document.body.style.overflow = 'hidden';
   detail.scrollTop = 0;
+  if (lenis) lenis.stop();          // freeze the page glide while the card is open
 }
 
-function closeDetail() { detail.hidden = true; document.body.style.overflow = ''; }
+function closeDetail() {
+  detail.hidden = true;
+  document.body.style.overflow = '';
+  if (lenis) lenis.start();
+}
 $('#close').onclick = closeDetail;
 detail.onclick = (e) => { if (e.target === detail) closeDetail(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !detail.hidden) closeDetail(); });
