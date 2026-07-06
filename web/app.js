@@ -4,7 +4,12 @@
 const ENDPOINTS = ['/api/cook', '/.netlify/functions/cook'];
 const BATCH = 24;
 const PIN = '<svg class="pin-sm" viewBox="0 0 32 46" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="5" width="14" height="9" rx="4.5"/><path d="M12 14 11 42"/><path d="M20 14 21 42"/><circle cx="16" cy="19" r="3.1"/><path d="M11 27 21 27"/></svg>';
-const state = { mode: 'seasons', data: { seasons: [], laundromat: [] }, deck: [], i: 0, q: '' };
+const KITCHEN = ['/api/kitchen', '/.netlify/functions/kitchen'];
+const PROTEINS = ['chicken thighs', 'chicken breast', 'whole chicken', 'ground beef', 'beef chuck roast',
+  'beef short ribs', 'beef stew meat', 'pork shoulder', 'pork chops', 'boneless pork ribs', 'ground pork',
+  'lamb shoulder', 'turkey', 'white beans', 'black beans', 'chickpeas', 'lentils', 'mushrooms', 'tofu'];
+const state = { mode: 'seasons', data: { seasons: [], laundromat: [] }, deck: [], i: 0, q: '',
+  kitchen: { protein: 'chicken thighs' } };
 const active = () => state.data[state.mode];
 
 const $ = (s) => document.querySelector(s);
@@ -138,8 +143,92 @@ function entryEl(r) {
 }
 
 new IntersectionObserver((entries) => {
-  if (entries[0].isIntersecting && active().length) renderBatch();
+  if (entries[0].isIntersecting && state.mode !== 'kitchen' && active().length) renderBatch();
 }, { rootMargin: '700px' }).observe($('#sentinel'));
+
+// ---- THE KITCHEN: a menu that composes itself (FIG-style) ----
+function showKitchen() {
+  menu.innerHTML = `
+    <div class="kitchen-controls">
+      <div class="kc-row"><span class="kc-label">tonight's five, built on</span>
+        <select id="protein" class="kc-select"></select></div>
+      <button id="reroll" class="kc-reroll">↻ compose a new menu</button>
+      <p class="kc-note">every ingredient shoppable at Walmart or Aldi</p>
+    </div>
+    <div id="kitchen-menu"></div>`;
+  const sel = $('#protein');
+  sel.innerHTML = PROTEINS.map((p) => `<option${p === state.kitchen.protein ? ' selected' : ''}>${p}</option>`).join('');
+  sel.onchange = (e) => { state.kitchen.protein = e.target.value; loadKitchen(false); };
+  $('#reroll').onclick = () => loadKitchen(true);
+  loadKitchen(false);
+}
+
+function loadKitchen(reroll) {
+  const km = $('#kitchen-menu');
+  const today = new Date().toISOString().slice(0, 10);
+  const protein = state.kitchen.protein;
+  const cacheKey = `kitchen:${today}:${protein}`;
+  if (!reroll) {
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) { try { return renderKitchen(JSON.parse(cached)); } catch (e) {} }
+  }
+  km.innerHTML = `<p class="kc-loading">composing tonight's menu…</p>`;
+  const seed = reroll ? today + ':' + Math.random().toString(36).slice(2, 8) : today;
+  (async () => {
+    try {
+      let json = null;
+      for (const url of KITCHEN) {
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ protein, seed }) });
+        if (res.status === 404) continue;
+        json = await res.json();
+        if (!res.ok || !json.ok) throw new Error(json.error || 'request failed');
+        break;
+      }
+      if (!json) throw new Error('no kitchen function on this deploy');
+      localStorage.setItem(cacheKey, JSON.stringify(json.data.dishes));
+      renderKitchen(json.data.dishes);
+    } catch (e) {
+      km.innerHTML = `<div class="err">Couldn’t compose the menu: ${esc(e.message)}.</div>`;
+    }
+  })();
+}
+
+function renderKitchen(dishes) {
+  const km = $('#kitchen-menu');
+  km.innerHTML = '';
+  dishes.forEach((d) => {
+    const el = document.createElement('article');
+    el.className = 'entry reveal';
+    el.innerHTML = `<div class="name">${esc(d.name)}</div>
+      <div class="desc">${esc(d.description)}</div>
+      <div class="src-line">${esc(d.flavor_world)}</div>`;
+    el.onclick = () => openKitchen(d);
+    km.appendChild(el);
+    revealIO.observe(el);
+  });
+}
+
+function openKitchen(d) {
+  detailBody.innerHTML = `
+    <h2 class="d-title">${esc(d.name)}</h2>
+    <p class="d-source">${esc(d.flavor_world)} · built on ${esc(state.kitchen.protein)}</p>
+    <p class="d-desc">${esc(d.description)}</p>
+    <div class="divider"></div>
+    <div class="block"><h4>the building blocks</h4><div class="shop">
+      <div><span class="store">braise:</span> ${esc(d.liquid)}</div>
+      <div><span class="store">vegetable:</span> ${esc(d.vegetable)}</div>
+      <div><span class="store">starch:</span> ${esc(d.starch)}</div>
+      <div><span class="store">finish:</span> ${esc(d.finish)}</div>
+    </div></div>
+    <button class="cook-btn" id="mbtn">🍲 Cook it — full Instant Pot + traditional recipe</button>
+    <div id="cookOut"></div>`;
+  $('#mbtn').onclick = () => runCook(d);
+  detail.hidden = false;
+  document.body.style.overflow = 'hidden';
+  detail.scrollTop = 0;
+  if (lenis) lenis.stop();
+}
 
 // ---- detail ----
 const detail = $('#detail');
@@ -208,13 +297,19 @@ async function runCook(r) {
   out.innerHTML = '';
   try {
     let body, source;
-    if (state.mode === 'laundromat') {
+    const title = r.title || r.name;
+    if (state.mode === 'kitchen') {
+      source = `${r.flavor_world} · ${state.kitchen.protein}`;
+      body = `${r.name}. ${r.description}. Built on ${state.kitchen.protein}, in the ${r.flavor_world} flavor world. `
+        + `Braising liquid: ${r.liquid}. Vegetable: ${r.vegetable}. Starch: ${r.starch}. Finish: ${r.finish}. `
+        + `Keep every ingredient available at a Charleston Walmart or Aldi.`;
+    } else if (state.mode === 'laundromat') {
       source = r.fl ? 'The French Laundry' : r.source;
       body = r.description
         ? r.description
         : `A classic dish, "${r.title}", as served historically at ${r.source}${r.year ? ' (' + r.year + ')' : ''}. Reconstruct it faithfully.`;
     } else { body = r.body; source = r.source_title; }
-    const payload = JSON.stringify({ title: r.title, body, source });
+    const payload = JSON.stringify({ title, body, source });
     let json = null;
     for (const url of ENDPOINTS) {
       const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: payload });
@@ -256,18 +351,23 @@ function cookHTML(m) {
   </div>`;
 }
 
-// ---- the clothespin toggle: swap menus ----
+// ---- the clothespin toggle: cycle DINNER -> THE LAUNDROMAT -> THE KITCHEN ----
+const MODES = ['seasons', 'laundromat', 'kitchen'];
+const TITLES = { seasons: 'DINNER', laundromat: 'THE LAUNDROMAT', kitchen: 'THE KITCHEN' };
 function setMode(mode) {
   state.mode = mode;
   document.body.classList.toggle('laundromat', mode === 'laundromat');
-  $('.dinner').textContent = mode === 'laundromat' ? 'THE LAUNDROMAT' : 'DINNER';
+  document.body.classList.toggle('kitchen', mode === 'kitchen');
+  $('.dinner').textContent = TITLES[mode];
+  $('#search').style.display = mode === 'kitchen' ? 'none' : '';
   $('#search').placeholder = mode === 'laundromat' ? 'find a classic' : 'find a dish';
   state.q = ''; $('#search').value = '';
   window.scrollTo(0, 0);
   if (lenis) lenis.scrollTo(0, { immediate: true });
-  ensureData(mode, reset);
+  if (mode === 'kitchen') showKitchen();
+  else ensureData(mode, reset);
 }
-$('#toggle').onclick = () => setMode(state.mode === 'seasons' ? 'laundromat' : 'seasons');
+$('#toggle').onclick = () => setMode(MODES[(MODES.indexOf(state.mode) + 1) % MODES.length]);
 
 // ---- search ----
 let t;

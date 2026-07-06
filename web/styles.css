@@ -170,3 +170,26 @@ body.laundromat .d-title { text-transform: uppercase; letter-spacing: .04em; fon
 .d-source { text-align: center; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--red-dk); margin: 6px 0 0; }
 .d-desc { text-align: center; font-size: 20px; color: #2c3550; margin: 14px 0 0; line-height: 1.4; }
 
+/* ---- THE KITCHEN ---- */
+body.kitchen .dinner {
+  font-family: "BBH Bartle", "Lora", serif;
+  font-weight: 400; letter-spacing: .01em;
+  font-size: clamp(30px, 8.5vw, 62px); white-space: nowrap;
+}
+body.kitchen .foot-note, body.kitchen .sentinel { display: none; }
+.kitchen-controls { text-align: center; padding: 4px 20px 8px; }
+.kc-row { font-size: 21px; }
+.kc-label { color: var(--muted); font-style: italic; }
+.kc-select {
+  font-family: "Lora", serif; font-size: 19px; padding: 6px 12px; margin-left: 6px;
+  border: 1px solid var(--line); border-radius: 6px; background: var(--sheet); color: var(--ink); cursor: pointer;
+}
+.kc-reroll {
+  margin-top: 18px; padding: 10px 22px; font-family: "Lora", serif; font-size: 17px;
+  color: #f3ead3; background: var(--red-dk); border: none; border-radius: 6px; cursor: pointer; transition: background .12s;
+}
+.kc-reroll:hover { background: var(--red); }
+.kc-note { color: var(--muted); font-style: italic; font-size: 14px; margin: 12px 0 0; }
+.kc-loading { text-align: center; color: var(--muted); font-style: italic; padding: 50px 0; font-size: 20px; }
+#kitchen-menu { margin-top: 14px; }
+
