@@ -53,7 +53,7 @@ function shuffle(a) {
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let lenis = null;
 if (window.Lenis && !reduceMotion) {
-  lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 1, touchMultiplier: 1.4 });
+  lenis = new Lenis({ lerp: 0.1, wheelMultiplier: 1, touchMultiplier: 1.4 });
   const raf = (t) => { lenis.raf(t); requestAnimationFrame(raf); };
   requestAnimationFrame(raf);
 }
