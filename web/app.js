@@ -5,9 +5,10 @@ const ENDPOINTS = ['/api/cook', '/.netlify/functions/cook'];
 const BATCH = 24;
 const PIN = '<svg class="pin-sm" viewBox="0 0 32 46" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="5" width="14" height="9" rx="4.5"/><path d="M12 14 11 42"/><path d="M20 14 21 42"/><circle cx="16" cy="19" r="3.1"/><path d="M11 27 21 27"/></svg>';
 const KITCHEN = ['/api/kitchen', '/.netlify/functions/kitchen'];
-const PROTEINS = ['chicken thighs', 'chicken breast', 'whole chicken', 'ground beef', 'beef chuck roast',
-  'beef short ribs', 'beef stew meat', 'pork shoulder', 'pork chops', 'boneless pork ribs', 'ground pork',
-  'lamb shoulder', 'turkey', 'white beans', 'black beans', 'chickpeas', 'lentils', 'mushrooms', 'tofu'];
+const PROTEINS = ['chicken thighs', 'chicken breast', 'whole chicken', 'turkey',
+  'ground beef', 'beef chuck roast', 'beef stew meat', 'beef short ribs', 'brisket',
+  'pork shoulder', 'pork chops', 'boneless pork ribs', 'ground pork', 'smoked sausage', 'chorizo',
+  'chickpeas', 'lentils', 'black beans', 'white beans', 'pinto beans', 'mushrooms', 'tofu'];
 const state = { mode: 'seasons', data: { seasons: [], laundromat: [] }, deck: [], i: 0, q: '',
   kitchen: { protein: 'chicken thighs' } };
 const active = () => state.data[state.mode];
