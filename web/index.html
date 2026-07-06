@@ -3,38 +3,25 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>pot✱scraper — cookable recipes from old cookbooks</title>
-<meta name="description" content="Cookable recipes pulled from public-domain cookbooks, scored for a Charleston grocery run, with one-tap AI modernization." />
+<title>pot✱scraper — the menu</title>
+<meta name="description" content="A rotating menu of dishes. Pick one and cook it in the Instant Pot or the traditional way." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<header class="top">
-  <div class="wrap">
-    <h1 class="wordmark">pot<span class="star">✱</span>scraper</h1>
-    <p class="tag">modern recipes for your <b>Instant Pot</b> — each one also done the
-      traditional way — with a <b>Charleston</b> shopping list (Walmart · Aldi · Costco)</p>
-  </div>
+<header class="masthead">
+  <div class="rule-top"></div>
+  <h1 class="wordmark">pot<span class="star">✱</span>scraper</h1>
+  <p class="tag">— a rotating menu · cooked in the pot, or the old way —</p>
+  <input id="search" class="search" type="search" placeholder="find a dish" autocomplete="off" />
+  <div class="rule-bot"></div>
 </header>
 
-<div class="controls wrap">
-  <input id="search" class="search" type="search"
-         placeholder="search — stew, curry, chili, risotto, pulled pork, chickpea…" autocomplete="off" />
-  <div class="row">
-    <select id="cuisine" class="cuisine">
-      <option value="all">all cuisines</option>
-    </select>
-    <div class="chips" id="stores">
-      <button class="chip on" data-store="all">any store</button>
-      <button class="chip" data-store="Walmart">Walmart</button>
-      <button class="chip" data-store="Aldi">Aldi</button>
-      <button class="chip" data-store="Costco">Costco</button>
-    </div>
-    <button id="surprise" class="surprise">🎲 surprise me</button>
-  </div>
-  <p class="count" id="count">loading the pantry…</p>
-</div>
-
-<main class="wrap grid" id="grid"></main>
+<main id="menu" class="menu"></main>
+<div id="sentinel" class="sentinel"></div>
+<p id="foot-note" class="foot-note">the menu never ends · scroll on</p>
 
 <div class="detail" id="detail" hidden>
   <div class="sheet">
@@ -42,11 +29,6 @@
     <div id="detailBody"></div>
   </div>
 </div>
-
-<footer class="foot wrap">
-  <span>Recipes are public domain via <a href="https://www.gutenberg.org">Project Gutenberg</a>.</span>
-  <span><a href="https://github.com/khobster/pot-scraper">source on GitHub</a> · the CLI holds the full 53k-recipe library</span>
-</footer>
 
 <script src="app.js"></script>
 </body>

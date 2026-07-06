@@ -14,6 +14,7 @@ import requests
 from .config import USER_AGENT
 
 BASE = "https://api.spoonacular.com/recipes/complexSearch"
+RANDOM = "https://api.spoonacular.com/recipes/random"
 
 # Dish types that shine in an Instant Pot and translate cleanly to stovetop.
 IP_FRIENDLY_QUERIES = [
@@ -63,6 +64,24 @@ def fetch_ip_friendly(per_query=12):
             if m["id"] not in seen:
                 seen.add(m["id"])
                 out.append(m)
+    return out
+
+
+def fetch_random(total=200, tags="main course"):
+    """Pull random real recipes — ~10x cheaper per point than complexSearch,
+    and perfect for a random menu. Paginated in blocks of 100."""
+    out = []
+    while len(out) < total:
+        n = min(100, total - len(out))
+        params = {"apiKey": _key(), "number": n}
+        if tags:
+            params["include-tags"] = tags
+        r = _session.get(RANDOM, params=params, timeout=30)
+        r.raise_for_status()
+        got = r.json().get("recipes", [])
+        if not got:
+            break
+        out += got
     return out
 
 
