@@ -49,38 +49,23 @@ def score_recipe(recipe):
         # essay that merely mentions food) — not a cookable recipe.
         score = 0
     else:
-        # "Practical" = you can source it locally AND cook it without a project.
-        # Start at 10 and dock for the things that make that harder.
+        # "Practical" = you can source it on a normal Charleston grocery run.
+        # For modern recipes a long ingredient list is normal, so sourceability
+        # (hard-to-find items) is the real signal — not recipe length.
         n_ing = len(avail) + len(hard)
-        words = len(body.split())
         s = 10.0
 
-        # 1. Sourceability — each hard-to-find item is a real blocker/substitution.
+        # each hard-to-source ingredient is a real blocker / substitution
         s -= 2.5 * len(hard)
 
-        # 2. Simplicity — a 15-ingredient banquet dish isn't a weeknight cook,
-        #    even if every ingredient is at Walmart.
-        if n_ing >= 16:
-            s -= 5.5
-        elif n_ing >= 12:
-            s -= 4
-        elif n_ing >= 9:
-            s -= 2.5
-        elif n_ing >= 6:
+        # only dock for a genuinely enormous ingredient list (a real project)
+        if n_ing >= 22:
+            s -= 2
+        elif n_ing >= 16:
             s -= 1
 
-        # 3. Effort — long method sections mean fiddly, multi-stage recipes.
-        if words > 600:
-            s -= 4.5
-        elif words > 400:
-            s -= 3
-        elif words > 250:
-            s -= 1.5
-        elif words > 130:
-            s -= 0.5
-
-        # 4. Archaic-measure friction — light touch, since `modernize` fixes it.
-        s -= 0.5 * min(len(measures), 4)
+        # archaic-measure friction (rare in modern recipes; `cook` handles it)
+        s -= 0.4 * min(len(measures), 3)
 
         score = max(1, min(10, round(s)))
 

@@ -116,7 +116,7 @@ function openDetail(r) {
     ${hard}
     ${measures}
     <div class="block"><h4>original recipe</h4><div class="orig">${esc(r.body)}</div></div>
-    <button class="modernize-btn" id="mbtn">🍲 Cook it 3 ways — Instant Pot / Air Fryer / Stovetop</button>
+    <button class="modernize-btn" id="mbtn">🍲 Cook it — Instant Pot + the traditional way</button>
     <div id="modernOut"></div>`;
   $('#mbtn').onclick = () => runCook(r);
   detail.hidden = false;
@@ -149,7 +149,7 @@ async function runCook(r) {
     }
     if (!json) throw new Error('no cook function found on this deploy');
     out.innerHTML = cookHTML(json.data);
-    btn.textContent = '🍲 Cook it 3 ways again';
+    btn.textContent = '🍲 Cook it again';
   } catch (e) {
     out.innerHTML = `<div class="err">Couldn’t do it: ${esc(e.message)}.<br>
       (If this is a fresh deploy, make sure <b>ANTHROPIC_API_KEY</b> is set in the site’s environment variables.)</div>`;
@@ -172,21 +172,14 @@ function cookHTML(m) {
   const ing = (m.ingredients || []).map((i) => `<li>${esc(i)}</li>`).join('');
   const shop = (m.shopping_list || []).map((s) => `<li>${esc(s.item)} <span class="pill">${esc(s.store)}</span></li>`).join('');
   const ip = m.instant_pot || {};
-  const st = m.stovetop_oven || {};
-  const af = m.air_fryer || {};
-  const afClass = af.suitable ? 'af-yes' : 'af-no';
+  const tr = m.traditional || {};
   return `<div class="modern">
     <h3>${esc(m.dish || 'Recipe')}</h3>
     <div class="serves">serves ${esc(m.servings || '?')}</div>
     <div class="block"><h4>ingredients</h4><ul>${ing}</ul></div>
     ${methodBlock('⚡', 'Instant Pot', ip.total_time, ip.steps)}
-    <div class="method ${afClass}">
-      <div class="method-head"><span class="method-name">🌀 Air-Fryer Lid</span>
-        <span class="method-time">${af.suitable ? 'useful here' : 'skip for this dish'}</span></div>
-      <p>${esc(af.note || '')}</p>
-    </div>
-    ${methodBlock('🔥', 'Stovetop / Oven', st.total_time, st.steps)}
-    ${m.best_method ? `<div class="block"><h4>best method</h4><p>${esc(m.best_method)}</p></div>` : ''}
+    ${methodBlock('🔥', tr.method || 'Traditional', tr.total_time, tr.steps)}
+    ${m.best_method ? `<div class="block"><h4>which to pick</h4><p>${esc(m.best_method)}</p></div>` : ''}
     <div class="block"><h4>shopping list · Charleston</h4><ul>${shop}</ul></div>
     ${m.notes ? `<div class="block"><h4>notes</h4><p>${esc(m.notes)}</p></div>` : ''}
   </div>`;

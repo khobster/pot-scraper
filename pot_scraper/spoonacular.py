@@ -89,7 +89,7 @@ def to_recipe(m):
 
     body = "Ingredients:\n" + "\n".join(ing_lines) + "\n\nMethod:\n" + method
     cuisines = m.get("cuisines") or []
-    cuisine = cuisines[0] if cuisines else (m.get("dishTypes") or ["Modern"])[0].title()
+    cuisine = cuisines[0] if cuisines else ""   # blank beats a wrong dishType label
 
     return {
         "title": (m.get("title") or "Untitled").strip(),

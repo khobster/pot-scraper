@@ -13,14 +13,13 @@ const CORS = {
   'Content-Type': 'application/json',
 };
 
-const SYSTEM = `You are a recipe translator for a home cook in Charleston, SC who cooks mostly in an Instant Pot (including its air-fryer lid) and shops at Walmart, Aldi, and Costco.
+const SYSTEM = `You are a recipe translator for a home cook in Charleston, SC who cooks mostly in an Instant Pot and shops at Walmart, Aldi, and Costco.
 
-Given a recipe, render the SAME dish three ways so it can be made in the Instant Pot or without it:
+Given a recipe, render the SAME dish two ways:
 - instant_pot: the pressure-cook method with realistic times (sauté/brown step, liquid needed to come to pressure, pressure-cook minutes, natural vs quick release). Include practical tips (e.g. deglaze to avoid the burn warning).
-- air_fryer: honestly say whether the Instant Pot air-fryer lid helps for THIS dish (great for crisping/roasting, useless for wet/soupy dishes). If useful, how; if not, say so and suggest where the lid could help as a companion step.
-- stovetop_oven: the conventional translation with realistic total time.
+- traditional: the most fitting NON-Instant-Pot way to make this dish — pick whatever is most natural for it (stovetop, oven-braised, slow cooker, etc.) and name it in "method". Give realistic total time and steps.
 - shopping_list: every ingredient mapped to ONE store (Walmart, Aldi, or Costco).
-- best_method: which method you'd pick for this dish and why.
+- best_method: which of the two you'd pick for this dish and why.
 - Keep it faithful to the original dish. Do not invent a different recipe.`;
 
 const SCHEMA = {
@@ -34,15 +33,10 @@ const SCHEMA = {
       properties: { total_time: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } } },
       required: ['total_time', 'steps'],
     },
-    air_fryer: {
+    traditional: {
       type: 'object', additionalProperties: false,
-      properties: { suitable: { type: 'boolean' }, note: { type: 'string' } },
-      required: ['suitable', 'note'],
-    },
-    stovetop_oven: {
-      type: 'object', additionalProperties: false,
-      properties: { total_time: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } } },
-      required: ['total_time', 'steps'],
+      properties: { method: { type: 'string' }, total_time: { type: 'string' }, steps: { type: 'array', items: { type: 'string' } } },
+      required: ['method', 'total_time', 'steps'],
     },
     shopping_list: {
       type: 'array',
@@ -55,7 +49,7 @@ const SCHEMA = {
     best_method: { type: 'string' },
     notes: { type: 'string' },
   },
-  required: ['dish', 'servings', 'ingredients', 'instant_pot', 'air_fryer', 'stovetop_oven', 'shopping_list', 'best_method', 'notes'],
+  required: ['dish', 'servings', 'ingredients', 'instant_pot', 'traditional', 'shopping_list', 'best_method', 'notes'],
 };
 
 exports.handler = async (event) => {
