@@ -12,6 +12,8 @@ const PROTEINS = ['chicken thighs', 'chicken breast', 'whole chicken', 'turkey',
 const state = { mode: 'seasons', data: { seasons: [], laundromat: [] }, deck: [], i: 0, q: '',
   kitchen: { protein: 'chicken thighs', seen: {} } };
 const active = () => state.data[state.mode];
+// remember every kitchen dish you've been shown, across sessions, so it never repeats
+try { state.kitchen.seen = JSON.parse(localStorage.getItem('kitchen-seen') || '{}') || {}; } catch (e) {}
 
 const $ = (s) => document.querySelector(s);
 const menu = $('#menu');
@@ -177,7 +179,8 @@ function showKitchen() {
 function noteSeen(protein, dishes) {
   const s = state.kitchen.seen[protein] || (state.kitchen.seen[protein] = []);
   (dishes || []).forEach((d) => { if (d && d.name && !s.includes(d.name)) s.push(d.name); });
-  if (s.length > 40) state.kitchen.seen[protein] = s.slice(-40);
+  if (s.length > 60) state.kitchen.seen[protein] = s.slice(-60);
+  try { localStorage.setItem('kitchen-seen', JSON.stringify(state.kitchen.seen)); } catch (e) {}
 }
 
 function loadKitchen(reroll) {
