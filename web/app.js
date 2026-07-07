@@ -153,7 +153,10 @@ function showKitchen() {
     <div class="kitchen-controls">
       <div class="kc-row"><span class="kc-label">tonight's five, built on</span>
         <select id="protein" class="kc-select"></select></div>
-      <button id="reroll" class="kc-reroll">↻ compose a new menu</button>
+      <div class="kc-buttons">
+        <button id="reroll" class="kc-reroll">↻ compose a new menu</button>
+        <button id="surprise" class="kc-surprise">🎲 surprise me</button>
+      </div>
       <p class="kc-note">every ingredient shoppable at Walmart or Aldi</p>
     </div>
     <div id="kitchen-menu"></div>`;
@@ -161,6 +164,13 @@ function showKitchen() {
   sel.innerHTML = PROTEINS.map((p) => `<option${p === state.kitchen.protein ? ' selected' : ''}>${p}</option>`).join('');
   sel.onchange = (e) => { state.kitchen.protein = e.target.value; loadKitchen(false); };
   $('#reroll').onclick = () => loadKitchen(true);
+  $('#surprise').onclick = () => {
+    const others = PROTEINS.filter((p) => p !== state.kitchen.protein);
+    const pick = others[Math.floor(Math.random() * others.length)];
+    state.kitchen.protein = pick;
+    $('#protein').value = pick;
+    loadKitchen(false);
+  };
   loadKitchen(false);
 }
 
