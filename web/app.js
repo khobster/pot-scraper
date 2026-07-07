@@ -168,7 +168,7 @@ function loadKitchen(reroll) {
   const km = $('#kitchen-menu');
   const today = new Date().toISOString().slice(0, 10);
   const protein = state.kitchen.protein;
-  const cacheKey = `kitchen:v2:${today}:${protein}`;   // v2 = with "inspired by" credit
+  const cacheKey = `kitchen:v3:${today}:${protein}`;   // v3 = wider vocabulary
   if (!reroll) {
     const cached = localStorage.getItem(cacheKey);
     if (cached) { try { return renderKitchen(JSON.parse(cached)); } catch (e) {} }
