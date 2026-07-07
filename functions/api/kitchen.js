@@ -30,7 +30,7 @@ TWO HARD RULES:
 1. INSTANT POT ONLY — braise / stew / pressure / simmer. No plating tricks, no raw, no pastry, no sear-only.
 2. WALMART / ALDI ONLY — every single ingredient must be reliably stocked at a normal US Walmart Supercenter (its international aisle counts: soy sauce, coconut milk, curry powder, garam masala, cumin, chili powder, chipotle in adobo, sriracha, gochujang, hoisin, fish sauce, rice vinegar, canned tomatoes, common spices) or Aldi. Do NOT use specialty-market items — no preserved lemon, ras el hanout, whole dried Oaxacan chiles, doubanjiang, gochugaru, fresh lemongrass, achiote, berbere, banana leaf, exotic offal. When a classic dish needs a specialty item, substitute the Walmart-available equivalent (chili powder + chipotle instead of dried chiles; lemon instead of preserved lemon; curry powder/garam masala from the spice aisle) and keep it honest.
 
-Ground each dish in a real, recognizable reference and NAME it in "inspiration" — range WIDELY, don't repeat the usual handful. Pull from famous chefs (Julia Child, Jacques Pépin, Escoffier, Marcella Hazan, Lidia Bastianich, Madhur Jaffrey, Diana Kennedy, Rick Bayless, Paul Prudhomme, Leah Chase, Edna Lewis, Sean Brock, Andrea Nguyen, Maangchi, Fuchsia Dunlop, J. Kenji López-Alt, Yotam Ottolenghi, Claudia Roden, Marcus Samuelsson, José Andrés, Ina Garten, Emeril Lagasse), legendary restaurants (Antoine's, Commander's Palace, Galatoire's, Momofuku, Husk, The Grey, Rodney Scott's BBQ), or specific regions (Oaxaca, Puebla, Emilia-Romagna, Tuscany, Naples, Provence, Lyon, Alsace, Andalusia, Marseille, Sichuan, Hunan, Hanoi, Bangkok, Kerala, Punjab, Goa, Seoul, Manila, Kingston, Lagos, Lima, Havana, New Orleans, the Carolina Lowcountry, Budapest). The dish must genuinely reflect that reference's technique, not just borrow the name. Vary the references across the five. Keep the "inspiration" value SHORT — just the name (a chef, restaurant, or region), not a sentence. Give each dish a real, appetizing name.`;
+Ground each dish in a real, recognizable reference and NAME it in "inspiration" — range WIDELY, don't repeat the usual handful. Pull from famous chefs (Julia Child, Jacques Pépin, Escoffier, Marcella Hazan, Lidia Bastianich, Madhur Jaffrey, Diana Kennedy, Rick Bayless, Paul Prudhomme, Leah Chase, Edna Lewis, Sean Brock, Andrea Nguyen, Maangchi, Fuchsia Dunlop, J. Kenji López-Alt, Yotam Ottolenghi, Claudia Roden, Marcus Samuelsson, José Andrés, Ina Garten, Emeril Lagasse), legendary restaurants (Antoine's, Commander's Palace, Galatoire's, Momofuku, Husk, The Grey, Rodney Scott's BBQ), or specific regions (Oaxaca, Puebla, Emilia-Romagna, Tuscany, Naples, Provence, Lyon, Alsace, Andalusia, Marseille, Sichuan, Hunan, Hanoi, Bangkok, Kerala, Punjab, Goa, Seoul, Manila, Kingston, Lagos, Lima, Havana, New Orleans, the Carolina Lowcountry, Budapest). The dish must genuinely reflect that reference's technique, not just borrow the name. Vary the references across the five. Favor the less-expected dish over the single most famous one for a given protein and cuisine — do NOT default to Coq au Vin for French chicken or Tikka Masala for Indian chicken; reach past the obvious into the deeper regional repertoire. Keep the "inspiration" value SHORT — just the name (a chef, restaurant, or region), not a sentence. Give each dish a real, appetizing name.`;
 
 const SCHEMA = {
   type: 'object', additionalProperties: false,
@@ -71,8 +71,12 @@ export async function onRequestPost(context) {
 
   const protein = String(body.protein || 'chicken thighs').slice(0, 60);
   const seed = String(body.seed || '').slice(0, 40);
+  const avoid = (Array.isArray(body.avoid) ? body.avoid : []).map((s) => String(s).slice(0, 80)).slice(-35);
+  const avoidLine = avoid.length
+    ? `\n\nAlready served on previous menus — do NOT repeat any of these or close variants; compose five genuinely DIFFERENT dishes: ${avoid.join('; ')}.`
+    : '';
 
-  const user = `Compose tonight's menu — 5 Instant Pot dishes, every one built on ${protein}, each a fresh recombination in a DIFFERENT flavor world, all shoppable at Walmart/Aldi. (menu seed: ${seed})`;
+  const user = `Compose tonight's menu — 5 Instant Pot dishes, every one built on ${protein}, each a fresh recombination in a DIFFERENT flavor world, all shoppable at Walmart/Aldi. (seed: ${seed})${avoidLine}`;
 
   const payload = {
     model: env.MODEL || DEFAULT_MODEL,

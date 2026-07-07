@@ -10,7 +10,7 @@ const PROTEINS = ['chicken thighs', 'chicken breast', 'whole chicken', 'turkey',
   'pork shoulder', 'pork chops', 'boneless pork ribs', 'ground pork', 'smoked sausage', 'chorizo',
   'chickpeas', 'lentils', 'black beans', 'white beans', 'pinto beans', 'mushrooms', 'tofu'];
 const state = { mode: 'seasons', data: { seasons: [], laundromat: [] }, deck: [], i: 0, q: '',
-  kitchen: { protein: 'chicken thighs' } };
+  kitchen: { protein: 'chicken thighs', seen: {} } };
 const active = () => state.data[state.mode];
 
 const $ = (s) => document.querySelector(s);
@@ -174,29 +174,39 @@ function showKitchen() {
   loadKitchen(false);
 }
 
+function noteSeen(protein, dishes) {
+  const s = state.kitchen.seen[protein] || (state.kitchen.seen[protein] = []);
+  (dishes || []).forEach((d) => { if (d && d.name && !s.includes(d.name)) s.push(d.name); });
+  if (s.length > 40) state.kitchen.seen[protein] = s.slice(-40);
+}
+
 function loadKitchen(reroll) {
   const km = $('#kitchen-menu');
   const today = new Date().toISOString().slice(0, 10);
   const protein = state.kitchen.protein;
-  const cacheKey = `kitchen:v3:${today}:${protein}`;   // v3 = wider vocabulary
+  const cacheKey = `kitchen:v3:${today}:${protein}`;
   if (!reroll) {
     const cached = localStorage.getItem(cacheKey);
-    if (cached) { try { return renderKitchen(JSON.parse(cached)); } catch (e) {} }
+    if (cached) {
+      try { const dishes = JSON.parse(cached); noteSeen(protein, dishes); return renderKitchen(dishes); } catch (e) {}
+    }
   }
   km.innerHTML = `<p class="kc-loading">composing tonight's menu…</p>`;
   const seed = reroll ? today + ':' + Math.random().toString(36).slice(2, 8) : today;
+  const avoid = state.kitchen.seen[protein] || [];   // don't repeat what you've been shown
   (async () => {
     try {
       let json = null;
       for (const url of KITCHEN) {
         const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ protein, seed }) });
+          body: JSON.stringify({ protein, seed, avoid }) });
         if (res.status === 404) continue;
         json = await res.json();
         if (!res.ok || !json.ok) throw new Error(json.error || 'request failed');
         break;
       }
       if (!json) throw new Error('no kitchen function on this deploy');
+      noteSeen(protein, json.data.dishes);
       localStorage.setItem(cacheKey, JSON.stringify(json.data.dishes));
       renderKitchen(json.data.dishes);
     } catch (e) {
