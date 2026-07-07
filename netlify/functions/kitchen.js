@@ -22,7 +22,7 @@ TWO HARD RULES:
 1. INSTANT POT ONLY — braise / stew / pressure / simmer. No plating tricks, no raw, no pastry, no sear-only.
 2. WALMART / ALDI ONLY — every single ingredient must be reliably stocked at a normal US Walmart Supercenter (its international aisle counts: soy sauce, coconut milk, curry powder, garam masala, cumin, chili powder, chipotle in adobo, sriracha, gochujang, hoisin, fish sauce, rice vinegar, canned tomatoes, common spices) or Aldi. Do NOT use specialty-market items — no preserved lemon, ras el hanout, whole dried Oaxacan chiles, doubanjiang, gochugaru, fresh lemongrass, achiote, berbere, banana leaf, exotic offal. When a classic dish needs a specialty item, substitute the Walmart-available equivalent (chili powder + chipotle instead of dried chiles; lemon instead of preserved lemon; curry powder/garam masala from the spice aisle) and keep it honest.
 
-Draw on the best real technique from the great cooks (Julia Child, Marcella Hazan, Madhur Jaffrey, Diana Kennedy) so the combinations are grounded, not random. Give each dish a real, appetizing name.`;
+Ground each dish in a real, recognizable reference — a famous chef, a legendary restaurant, or a specific regional tradition — and name it in "inspiration" (e.g., "Julia Child", "Marcella Hazan", "Madhur Jaffrey", "Antoine's of New Orleans", "Oaxaca", "a Bangkok street stall", "Emilia-Romagna"). The dish should genuinely reflect that reference's technique, not just borrow the name. Vary the references across the five. Give each dish a real, appetizing name.`;
 
 const SCHEMA = {
   type: 'object', additionalProperties: false,
@@ -33,6 +33,7 @@ const SCHEMA = {
         type: 'object', additionalProperties: false,
         properties: {
           name: { type: 'string' },
+          inspiration: { type: 'string' },
           flavor_world: { type: 'string' },
           description: { type: 'string' },
           liquid: { type: 'string' },
@@ -40,7 +41,7 @@ const SCHEMA = {
           starch: { type: 'string' },
           finish: { type: 'string' },
         },
-        required: ['name', 'flavor_world', 'description', 'liquid', 'vegetable', 'starch', 'finish'],
+        required: ['name', 'inspiration', 'flavor_world', 'description', 'liquid', 'vegetable', 'starch', 'finish'],
       },
     },
   },

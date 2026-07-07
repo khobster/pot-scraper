@@ -168,7 +168,7 @@ function loadKitchen(reroll) {
   const km = $('#kitchen-menu');
   const today = new Date().toISOString().slice(0, 10);
   const protein = state.kitchen.protein;
-  const cacheKey = `kitchen:${today}:${protein}`;
+  const cacheKey = `kitchen:v2:${today}:${protein}`;   // v2 = with "inspired by" credit
   if (!reroll) {
     const cached = localStorage.getItem(cacheKey);
     if (cached) { try { return renderKitchen(JSON.parse(cached)); } catch (e) {} }
@@ -203,7 +203,7 @@ function renderKitchen(dishes) {
     el.className = 'entry reveal';
     el.innerHTML = `<div class="name">${esc(d.name)}</div>
       <div class="desc">${esc(d.description)}</div>
-      <div class="src-line">${esc(d.flavor_world)}</div>`;
+      <div class="src-line">after ${esc(d.inspiration || d.flavor_world)}</div>`;
     el.onclick = () => openKitchen(d);
     km.appendChild(el);
     revealIO.observe(el);
@@ -213,10 +213,11 @@ function renderKitchen(dishes) {
 function openKitchen(d) {
   detailBody.innerHTML = `
     <h2 class="d-title">${esc(d.name)}</h2>
-    <p class="d-source">${esc(d.flavor_world)} · built on ${esc(state.kitchen.protein)}</p>
+    <p class="d-source">after ${esc(d.inspiration || d.flavor_world)} · built on ${esc(state.kitchen.protein)}</p>
     <p class="d-desc">${esc(d.description)}</p>
     <div class="divider"></div>
     <div class="block"><h4>the building blocks</h4><div class="shop">
+      <div><span class="store">style:</span> ${esc(d.flavor_world)}</div>
       <div><span class="store">braise:</span> ${esc(d.liquid)}</div>
       <div><span class="store">vegetable:</span> ${esc(d.vegetable)}</div>
       <div><span class="store">starch:</span> ${esc(d.starch)}</div>
@@ -300,10 +301,11 @@ async function runCook(r) {
     let body, source;
     const title = r.title || r.name;
     if (state.mode === 'kitchen') {
-      source = `${r.flavor_world} · ${state.kitchen.protein}`;
-      body = `${r.name}. ${r.description}. Built on ${state.kitchen.protein}, in the ${r.flavor_world} flavor world. `
+      source = `after ${r.inspiration || r.flavor_world} · ${state.kitchen.protein}`;
+      body = `${r.name}. ${r.description}. Inspired by ${r.inspiration || r.flavor_world}. `
+        + `Built on ${state.kitchen.protein}, in the ${r.flavor_world} flavor world. `
         + `Braising liquid: ${r.liquid}. Vegetable: ${r.vegetable}. Starch: ${r.starch}. Finish: ${r.finish}. `
-        + `Keep every ingredient available at a Charleston Walmart or Aldi.`;
+        + `Cook it in that reference's authentic technique. Keep every ingredient available at a Charleston Walmart or Aldi.`;
     } else if (state.mode === 'laundromat') {
       source = r.fl ? 'The French Laundry' : r.source;
       body = r.description
